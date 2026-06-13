@@ -71,23 +71,24 @@ export async function generateImage(
   return loadFromPollinations(prompt, seed, width, height);
 }
 
-// ---- Gemini Imagen 3 ----
+// ---- Gemini image generation ----
+// Uses gemini-2.0-flash-preview-image-generation (free tier, no billing required)
 
 async function generateWithGemini(prompt: string, apiKey: string): Promise<string> {
-  // Imagen 3 via Gemini API
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-015:predict?key=${apiKey}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`;
 
   const res = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      instances: [{ prompt }],
-      parameters: { sampleCount: 1 },
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseModalities: ['IMAGE', 'TEXT'] },
     }),
   });
 
   if (res.status === 400 || res.status === 401 || res.status === 403) {
-    throw new Error('INVALID_GEMINI_KEY');
+    const body = await res.json().catch(() => ({}));
+    throw new Error(`INVALID_GEMINI_KEY: ${JSON.stringify(body).slice(0, 120)}`);
   }
 
   if (res.status === 429) {
@@ -101,15 +102,29 @@ async function generateWithGemini(prompt: string, apiKey: string): Promise<strin
   }
 
   const data = await res.json();
-  const b64 = data?.predictions?.[0]?.bytesBase64Encoded as string | undefined;
-  const mime = (data?.predictions?.[0]?.mimeType as string | undefined) ?? 'image/png';
 
-  if (!b64) throw new Error('Gemini: no image in response');
+  // Extract inline image from generateContent response
+  const parts: Array<{ inlineData?: { mimeType: string; data: string }; text?: string }> =
+    data?.candidates?.[0]?.content?.parts ?? [];
 
-  return `data:${mime};base64,${b64}`;
+  const imagePart = parts.find(p => p.inlineData?.data);
+  if (!imagePart?.inlineData) {
+    throw new Error('Gemini: no image in response');
+  }
+
+  return `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
 }
 
-// ---- Hugging Face SDXL ----
+export async function validateGeminiKey(key: string): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
 
 async function generateWithHF(
   prompt: string,
@@ -188,25 +203,4 @@ function loadFromPollinations(
   });
 }
 
-// ---- Validation helpers ----
 
-export async function validateGeminiKey(key: string): Promise<boolean> {
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-015:predict?key=${key}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          instances: [{ prompt: 'test' }],
-          parameters: { sampleCount: 1 },
-        }),
-      }
-    );
-    // 400 means bad request (model needs more prompt) — key is valid
-    // 401/403 means key is invalid
-    return res.status !== 401 && res.status !== 403;
-  } catch {
-    return false;
-  }
-}

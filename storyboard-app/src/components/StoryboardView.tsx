@@ -144,7 +144,8 @@ export function StoryboardView({ storyboard, onEdit, onBack, onChange }: Storybo
       try {
         imageUrl = await generateImage(prompt, storyboard.character.styleSeed + idx, 512, 384);
         finalStatus = 'done';
-      } catch {
+      } catch (err) {
+        console.error('Panel generation error:', err);
         finalStatus = 'error';
       }
 
