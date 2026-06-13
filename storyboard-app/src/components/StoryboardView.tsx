@@ -64,24 +64,27 @@ function PanelCell({
         className="relative flex-1 rounded-xl overflow-hidden bg-gray-100 panel-shadow group"
         style={{ minHeight: rowSpan > 1 ? '280px' : '180px' }}
       >
+        {/* Spinner overlay while generating */}
         {isGenerating && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50/80 z-10">
             <Loader2 className="w-8 h-8 animate-spin mb-2" style={{ color: accentColor }} />
             <p className="text-xs text-gray-500">Generating…</p>
           </div>
         )}
-        {isDone && panel.imageUrl && (
+
+        {/* Image — shown as soon as URL exists (generating or done) */}
+        {panel.imageUrl && (isDone || isGenerating) && (
           <img
             src={panel.imageUrl}
             alt={panel.title || `Panel ${panel.number}`}
             className="w-full h-full object-cover"
-            crossOrigin="anonymous"
           />
         )}
+
         {isError && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50 text-red-400">
             <XCircle className="w-8 h-8 mb-2" />
-            <p className="text-xs">Generation failed</p>
+            <p className="text-xs">Generation failed — click Redo</p>
           </div>
         )}
         {panel.imageStatus === 'empty' && (
@@ -134,23 +137,23 @@ export function StoryboardView({ storyboard, onEdit, onBack, onChange }: Storybo
         height: 384,
       });
 
-      // Mark as generating
+      // Set the URL immediately and mark as generating — the <img> tag will start loading on its own
       const updated = panelList.map((p, i) =>
-        i === idx ? { ...p, imageStatus: 'generating' as const } : p
+        i === idx ? { ...p, imageUrl: url, imageStatus: 'generating' as const } : p
       );
       setPanels(updated);
 
-      // Wait for image to load
-      await new Promise<void>(resolve => {
+      // Poll until the image responds (no crossOrigin to avoid CORS cache poisoning)
+      const loaded = await new Promise<boolean>(resolve => {
         const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => resolve();
-        img.onerror = () => resolve();
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
         img.src = url;
       });
 
+      const finalStatus = loaded ? ('done' as const) : ('error' as const);
       const final = updated.map((p, i) =>
-        i === idx ? { ...p, imageUrl: url, imageStatus: 'done' as const } : p
+        i === idx ? { ...p, imageStatus: finalStatus } : p
       );
       setPanels(final);
       return final;

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { v4 as uuid } from 'uuid';
-import { Wand2, RefreshCw, ChevronRight, Palette } from 'lucide-react';
+import { Wand2, RefreshCw, ChevronRight, Palette, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from './ui/Button';
 import type { Character } from '../types';
 import { buildMasterPrompt, buildImageUrl, MASTER_ANGLES } from '../utils/pollinations';
@@ -14,6 +14,13 @@ const ACCENT_COLORS = [
   { hex: '#E8C42A', label: 'Gold' },
 ];
 
+type ImgStatus = 'loading' | 'done' | 'error';
+
+interface MasterSlot {
+  url: string;
+  status: ImgStatus;
+}
+
 interface CharacterCreatorProps {
   onDone: (character: Character) => void;
   initial?: Character;
@@ -24,43 +31,34 @@ export function CharacterCreator({ onDone, initial }: CharacterCreatorProps) {
   const [description, setDescription] = useState(initial?.description ?? '');
   const [accentColor, setAccentColor] = useState(initial?.accentColor ?? '#E8622A');
   const [seed] = useState(initial?.styleSeed ?? Math.floor(Math.random() * 99999));
-  const [masterImages, setMasterImages] = useState<string[]>(initial?.masterImages ?? []);
-  const [generating, setGenerating] = useState(false);
+  const [slots, setSlots] = useState<MasterSlot[]>(
+    (initial?.masterImages ?? []).map(url => ({ url, status: 'done' }))
+  );
   const [error, setError] = useState('');
 
-  const generateMasters = useCallback(async () => {
+  const updateSlot = (i: number, status: ImgStatus) => {
+    setSlots(prev => prev.map((s, idx) => (idx === i ? { ...s, status } : s)));
+  };
+
+  const generateMasters = useCallback(() => {
     if (!description.trim()) {
       setError('Please describe your character first.');
       return;
     }
     setError('');
-    setGenerating(true);
-    setMasterImages([]);
 
-    const urls = MASTER_ANGLES.map(angle =>
-      buildImageUrl({
+    // Build URLs and show slots immediately — each <img> loads independently
+    const newSlots: MasterSlot[] = MASTER_ANGLES.map(angle => ({
+      url: buildImageUrl({
         prompt: buildMasterPrompt(description, angle, accentColor),
-        seed,
+        // Add a cache-bust so regeneration always fetches fresh
+        seed: seed + Math.floor(Math.random() * 10),
         width: 400,
         height: 500,
-      })
-    );
-
-    // Preload all images in parallel
-    await Promise.allSettled(
-      urls.map(
-        url =>
-          new Promise<void>(resolve => {
-            const img = new Image();
-            img.onload = () => resolve();
-            img.onerror = () => resolve();
-            img.src = url;
-          })
-      )
-    );
-
-    setMasterImages(urls);
-    setGenerating(false);
+      }),
+      status: 'loading',
+    }));
+    setSlots(newSlots);
   }, [description, accentColor, seed]);
 
   const handleContinue = () => {
@@ -74,11 +72,14 @@ export function CharacterCreator({ onDone, initial }: CharacterCreatorProps) {
       description,
       accentColor,
       styleSeed: seed,
-      masterImages,
-      masterStatus: masterImages.length > 0 ? 'done' : 'empty',
+      masterImages: slots.filter(s => s.status === 'done').map(s => s.url),
+      masterStatus: slots.some(s => s.status === 'done') ? 'done' : 'empty',
     };
     onDone(character);
   };
+
+  const anyLoading = slots.some(s => s.status === 'loading');
+  const anyDone = slots.some(s => s.status === 'done');
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -98,7 +99,8 @@ export function CharacterCreator({ onDone, initial }: CharacterCreatorProps) {
       <div className="space-y-5">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Character name <span className="text-gray-400 font-normal">(for your reference)</span>
+            Character name{' '}
+            <span className="text-gray-400 font-normal">(for your reference)</span>
           </label>
           <input
             type="text"
@@ -116,7 +118,9 @@ export function CharacterCreator({ onDone, initial }: CharacterCreatorProps) {
           <textarea
             value={description}
             onChange={e => setDescription(e.target.value)}
-            placeholder="Describe the character's appearance: age, build, clothing, hair, notable features. The more detail, the more consistent the AI will render them.&#10;&#10;Example: 'Middle-aged man, casual dark jeans and white t-shirt, short brown hair, medium build, always carries a phone'"
+            placeholder={
+              "Describe the character's appearance: age, build, clothing, hair, notable features.\n\nExample: 'Middle-aged man, casual dark jeans and white t-shirt, short brown hair, medium build'"
+            }
             rows={4}
             className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[#E8622A] focus:ring-2 focus:ring-[#E8622A]/20 transition-all bg-white resize-none"
           />
@@ -148,56 +152,82 @@ export function CharacterCreator({ onDone, initial }: CharacterCreatorProps) {
           <p className="text-red-500 text-sm bg-red-50 px-4 py-2 rounded-lg">{error}</p>
         )}
 
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           <Button
             variant="secondary"
             icon={<Wand2 className="w-4 h-4" />}
             onClick={generateMasters}
-            loading={generating}
+            loading={anyLoading}
           >
-            {masterImages.length > 0 ? 'Regenerate' : 'Preview character'}
+            {slots.length > 0 ? 'Regenerate preview' : 'Preview character'}
           </Button>
-          <Button
-            icon={<ChevronRight className="w-4 h-4" />}
-            onClick={handleContinue}
-          >
+          <Button icon={<ChevronRight className="w-4 h-4" />} onClick={handleContinue}>
             Continue to Layout
           </Button>
         </div>
 
-        {generating && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700">
-            Generating 4 reference views via Pollinations.ai… this takes 15–30 seconds.
-          </div>
-        )}
-
-        {masterImages.length > 0 && (
+        {/* Image grid — shows immediately, each slot loads independently */}
+        {slots.length > 0 && (
           <div>
             <p className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
               <RefreshCw className="w-4 h-4 text-[#E8622A]" />
               Character reference sheet
               <span className="text-xs text-gray-400 font-normal">
-                — seed #{seed} will be used for all panels
+                — seed #{seed} used for all panels
               </span>
             </p>
+
+            {anyLoading && (
+              <p className="text-xs text-amber-600 mb-2 flex items-center gap-1.5">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Images are being generated by Pollinations.ai — may take 20–40 s each
+              </p>
+            )}
+
             <div className="grid grid-cols-4 gap-3">
-              {masterImages.map((url, i) => (
+              {slots.map((slot, i) => (
                 <div
-                  key={i}
-                  className="rounded-xl overflow-hidden border border-gray-100 bg-gray-50 aspect-[4/5]"
+                  key={slot.url}
+                  className="rounded-xl overflow-hidden border border-gray-100 bg-gray-50 aspect-[4/5] relative flex items-center justify-center"
                 >
+                  {slot.status === 'loading' && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-400">
+                      <Loader2
+                        className="w-6 h-6 animate-spin"
+                        style={{ color: accentColor }}
+                      />
+                      <span className="text-xs">Generating…</span>
+                    </div>
+                  )}
+
+                  {slot.status === 'error' && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-red-400 p-2 text-center">
+                      <AlertCircle className="w-5 h-5" />
+                      <span className="text-xs leading-tight">Failed — try regenerating</span>
+                    </div>
+                  )}
+
                   <img
-                    src={url}
-                    alt={`Character ${MASTER_ANGLES[i]}`}
+                    src={slot.url}
+                    alt={MASTER_ANGLES[i]}
+                    onLoad={() => updateSlot(i, 'done')}
+                    onError={() => updateSlot(i, 'error')}
                     className="w-full h-full object-cover"
-                    loading="lazy"
+                    style={{ display: slot.status === 'done' ? 'block' : 'none' }}
                   />
                 </div>
               ))}
             </div>
+
             <p className="text-xs text-gray-400 mt-2">
               Front · Side · Three-quarter · Portrait
             </p>
+
+            {!anyDone && !anyLoading && (
+              <p className="text-xs text-red-500 mt-1">
+                All images failed. Check your internet connection and try regenerating.
+              </p>
+            )}
           </div>
         )}
       </div>
