@@ -179,9 +179,9 @@ export function StoryboardView({ storyboard, onEdit, onBack, onChange }: Storybo
     const run = async () => {
       for (let i = 0; i < toGenerate.length; i++) {
         current = await generatePanel(toGenerate[i].panelDefId, current);
-        // Gemini free tier: ~10 req/min — wait 7s between each panel
+        // Gemini free tier ~10 req/min — wait 8s between panels
         if (i < toGenerate.length - 1) {
-          await new Promise(r => setTimeout(r, 7000));
+          await new Promise(r => setTimeout(r, 8000));
         }
       }
       // Auto-save after generation
@@ -198,6 +198,22 @@ export function StoryboardView({ storyboard, onEdit, onBack, onChange }: Storybo
     const updated = { ...storyboard, panels: current, updatedAt: Date.now() };
     onChange(updated);
     saveStoryboard(updated);
+  };
+
+  const handleRetryAll = () => {
+    const failed = panels.filter(p => p.imageStatus === 'error' || p.imageStatus === 'empty');
+    if (failed.length === 0) return;
+    let current = [...panels];
+    const run = async () => {
+      for (let i = 0; i < failed.length; i++) {
+        current = await generatePanel(failed[i].panelDefId, current);
+        if (i < failed.length - 1) await new Promise(r => setTimeout(r, 8000));
+      }
+      const updated = { ...storyboard, panels: current, updatedAt: Date.now() };
+      onChange(updated);
+      saveStoryboard(updated);
+    };
+    run();
   };
 
   const handleSave = () => {
@@ -260,6 +276,16 @@ export function StoryboardView({ storyboard, onEdit, onBack, onChange }: Storybo
           >
             Edit panels
           </Button>
+          {panels.some(p => p.imageStatus === 'error') && !generating && (
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<RefreshCw className="w-4 h-4" />}
+              onClick={handleRetryAll}
+            >
+              Retry all failed
+            </Button>
+          )}
           <Button
             variant="secondary"
             size="sm"

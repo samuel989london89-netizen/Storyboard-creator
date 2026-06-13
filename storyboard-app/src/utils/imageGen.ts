@@ -90,43 +90,47 @@ async function generateWithGemini(prompt: string, apiKey: string): Promise<strin
       if (result) return result;
     } catch (err) {
       lastError = String(err);
-      // 404 = model not found, try next
       if (lastError.includes('404') || lastError.includes('NOT_FOUND')) continue;
-      // Auth errors — no point trying other models
-      if (lastError.includes('401') || lastError.includes('403') || lastError.includes('INVALID')) {
-        throw new Error('INVALID_GEMINI_KEY');
-      }
-      // 429 rate limit — wait and retry same model
-      if (lastError.includes('429')) {
-        await sleep(10000);
-        const result = await tryGeminiModel(prompt, apiKey, model);
-        if (result) return result;
-      }
+      if (lastError.includes('INVALID_GEMINI_KEY')) throw new Error('INVALID_GEMINI_KEY');
+      // For any other error (including 429), try next model
+      continue;
     }
   }
 
-  throw new Error(`Gemini: all models failed. Last error: ${lastError}`);
+  throw new Error(`Gemini: all models failed. Last: ${lastError}`);
 }
 
 async function tryGeminiModel(prompt: string, apiKey: string, model: string): Promise<string | null> {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      // TEXT must come before IMAGE — otherwise API returns empty parts silently
-      generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
-    }),
-  });
+  // 45-second hard timeout per attempt
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 45000);
+
+  let res: Response;
+  try {
+    res = await fetch(endpoint, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+      }),
+    });
+  } catch (err) {
+    clearTimeout(timer);
+    if ((err as Error).name === 'AbortError') throw new Error('timeout');
+    throw err;
+  }
+  clearTimeout(timer);
 
   if (res.status === 404) throw new Error('404 NOT_FOUND');
   if (res.status === 401 || res.status === 403) throw new Error('INVALID_GEMINI_KEY');
   if (res.status === 429) {
-    // Free tier rate limit — wait and retry once
-    await sleep(15000);
-    return tryGeminiModel(prompt, apiKey, model);
+    // Wait once then throw so caller can try next model
+    await sleep(8000);
+    throw new Error('429 rate limit');
   }
 
   if (!res.ok) {
@@ -139,7 +143,7 @@ async function tryGeminiModel(prompt: string, apiKey: string, model: string): Pr
     data?.candidates?.[0]?.content?.parts ?? [];
 
   const imagePart = parts.find(p => p.inlineData?.data);
-  if (!imagePart?.inlineData) return null; // model returned text only, try next
+  if (!imagePart?.inlineData) return null;
 
   return `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
 }
