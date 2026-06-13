@@ -14,7 +14,7 @@ import { Button } from './ui/Button';
 import type { Storyboard, PanelContent } from '../types';
 import { getLayout } from '../utils/layouts';
 import { buildPanelPrompt } from '../utils/pollinations';
-import { generateImage, getHFToken } from '../utils/imageGen';
+import { generateImage } from '../utils/imageGen';
 import { exportAsPng, exportAsSvg } from '../utils/export';
 import { saveStoryboard } from '../utils/storage';
 
@@ -179,9 +179,9 @@ export function StoryboardView({ storyboard, onEdit, onBack, onChange }: Storybo
     const run = async () => {
       for (let i = 0; i < toGenerate.length; i++) {
         current = await generatePanel(toGenerate[i].panelDefId, current);
-        // 2 s gap between requests only when falling back to Pollinations
-        if (!getHFToken() && i < toGenerate.length - 1) {
-          await new Promise(r => setTimeout(r, 2000));
+        // Gemini free tier: ~10 req/min — wait 7s between each panel
+        if (i < toGenerate.length - 1) {
+          await new Promise(r => setTimeout(r, 7000));
         }
       }
       // Auto-save after generation
@@ -223,6 +223,8 @@ export function StoryboardView({ storyboard, onEdit, onBack, onChange }: Storybo
 
   const allDone = panels.every(p => p.imageStatus === 'done');
   const generating = panels.some(p => p.imageStatus === 'generating');
+  const doneCount = panels.filter(p => p.imageStatus === 'done').length;
+  const totalCount = panels.length;
 
   return (
     <div>
@@ -238,7 +240,7 @@ export function StoryboardView({ storyboard, onEdit, onBack, onChange }: Storybo
           {generating && (
             <span className="flex items-center gap-1.5 text-xs text-[#E8622A] font-medium">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Generating…
+              Generating {doneCount + 1}/{totalCount} — ~7s between panels
             </span>
           )}
           {allDone && !generating && (

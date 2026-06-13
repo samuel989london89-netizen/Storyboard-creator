@@ -123,7 +123,11 @@ async function tryGeminiModel(prompt: string, apiKey: string, model: string): Pr
 
   if (res.status === 404) throw new Error('404 NOT_FOUND');
   if (res.status === 401 || res.status === 403) throw new Error('INVALID_GEMINI_KEY');
-  if (res.status === 429) throw new Error('429 rate limit');
+  if (res.status === 429) {
+    // Free tier rate limit — wait and retry once
+    await sleep(15000);
+    return tryGeminiModel(prompt, apiKey, model);
+  }
 
   if (!res.ok) {
     const body = await res.text().catch(() => '');
