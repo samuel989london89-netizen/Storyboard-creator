@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { v4 as uuid } from 'uuid';
-import { Wand2, RefreshCw, ChevronRight, Palette, Loader2, AlertCircle } from 'lucide-react';
+import { Wand2, RefreshCw, ChevronRight, Palette, Loader2, AlertCircle, Clock } from 'lucide-react';
 import { Button } from './ui/Button';
 import type { Character } from '../types';
 import { buildMasterPrompt, buildImageUrl, MASTER_ANGLES } from '../utils/pollinations';
@@ -14,7 +14,7 @@ const ACCENT_COLORS = [
   { hex: '#E8C42A', label: 'Gold' },
 ];
 
-type ImgStatus = 'loading' | 'done' | 'error';
+type ImgStatus = 'pending' | 'loading' | 'done' | 'error';
 
 interface MasterSlot {
   url: string;
@@ -34,38 +34,71 @@ export function CharacterCreator({ onDone, initial }: CharacterCreatorProps) {
   const [slots, setSlots] = useState<MasterSlot[]>(
     (initial?.masterImages ?? []).map(url => ({ url, status: 'done' }))
   );
+  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
+  const cancelRef = useRef(false);
 
-  const updateSlot = (i: number, status: ImgStatus) => {
-    setSlots(prev => prev.map((s, idx) => (idx === i ? { ...s, status } : s)));
-  };
+  /** Load a single image — no crossOrigin to avoid CORS cache poisoning */
+  const loadOne = (url: string): Promise<boolean> =>
+    new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = url;
+    });
 
-  const generateMasters = useCallback(() => {
+  const generateMasters = useCallback(async () => {
     if (!description.trim()) {
       setError('Please describe your character first.');
       return;
     }
     setError('');
+    cancelRef.current = false;
+    setGenerating(true);
 
-    // Build URLs and show slots immediately — each <img> loads independently
-    const newSlots: MasterSlot[] = MASTER_ANGLES.map(angle => ({
-      url: buildImageUrl({
-        prompt: buildMasterPrompt(description, angle, accentColor),
-        // Add a cache-bust so regeneration always fetches fresh
-        seed: seed + Math.floor(Math.random() * 10),
+    // Show all 4 slots immediately as "pending"
+    setSlots(MASTER_ANGLES.map(() => ({ url: '', status: 'pending' })));
+
+    // Generate one at a time — Pollinations allows max 1 queued per IP
+    for (let i = 0; i < MASTER_ANGLES.length; i++) {
+      if (cancelRef.current) break;
+
+      const url = buildImageUrl({
+        prompt: buildMasterPrompt(description, MASTER_ANGLES[i], accentColor),
+        seed,
         width: 400,
         height: 500,
-      }),
-      status: 'loading',
-    }));
-    setSlots(newSlots);
+      });
+
+      // Mark this slot as loading
+      setSlots(prev => prev.map((s, idx) => (idx === i ? { url, status: 'loading' } : s)));
+
+      const ok = await loadOne(url);
+
+      setSlots(prev =>
+        prev.map((s, idx) => (idx === i ? { url, status: ok ? 'done' : 'error' } : s))
+      );
+
+      // Wait 2 s before next request to stay within the free rate limit
+      if (i < MASTER_ANGLES.length - 1 && !cancelRef.current) {
+        await new Promise(r => setTimeout(r, 2000));
+      }
+    }
+
+    setGenerating(false);
   }, [description, accentColor, seed]);
+
+  const stopGenerating = () => {
+    cancelRef.current = true;
+    setGenerating(false);
+  };
 
   const handleContinue = () => {
     if (!name.trim() || !description.trim()) {
       setError('Please fill in both the character name and description.');
       return;
     }
+    if (generating) stopGenerating();
     const character: Character = {
       id: initial?.id ?? uuid(),
       name,
@@ -78,8 +111,9 @@ export function CharacterCreator({ onDone, initial }: CharacterCreatorProps) {
     onDone(character);
   };
 
-  const anyLoading = slots.some(s => s.status === 'loading');
   const anyDone = slots.some(s => s.status === 'done');
+  const allFailed = slots.length > 0 && slots.every(s => s.status === 'error');
+  const doneCount = slots.filter(s => s.status === 'done').length;
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -153,23 +187,28 @@ export function CharacterCreator({ onDone, initial }: CharacterCreatorProps) {
         )}
 
         <div className="flex gap-3 flex-wrap">
-          <Button
-            variant="secondary"
-            icon={<Wand2 className="w-4 h-4" />}
-            onClick={generateMasters}
-            loading={anyLoading}
-          >
-            {slots.length > 0 ? 'Regenerate preview' : 'Preview character'}
-          </Button>
+          {!generating ? (
+            <Button
+              variant="secondary"
+              icon={<Wand2 className="w-4 h-4" />}
+              onClick={generateMasters}
+            >
+              {slots.length > 0 ? 'Regenerate preview' : 'Preview character'}
+            </Button>
+          ) : (
+            <Button variant="ghost" onClick={stopGenerating}>
+              Cancel
+            </Button>
+          )}
           <Button icon={<ChevronRight className="w-4 h-4" />} onClick={handleContinue}>
             Continue to Layout
           </Button>
         </div>
 
-        {/* Image grid — shows immediately, each slot loads independently */}
+        {/* Image grid — one slot loads at a time */}
         {slots.length > 0 && (
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+            <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
               <RefreshCw className="w-4 h-4 text-[#E8622A]" />
               Character reference sheet
               <span className="text-xs text-gray-400 font-normal">
@@ -177,21 +216,29 @@ export function CharacterCreator({ onDone, initial }: CharacterCreatorProps) {
               </span>
             </p>
 
-            {anyLoading && (
+            {generating && (
               <p className="text-xs text-amber-600 mb-2 flex items-center gap-1.5">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                Images are being generated by Pollinations.ai — may take 20–40 s each
+                Generating {doneCount + 1} of {MASTER_ANGLES.length} — images load one at a
+                time (~20–40 s each)
               </p>
             )}
 
             <div className="grid grid-cols-4 gap-3">
               {slots.map((slot, i) => (
                 <div
-                  key={slot.url}
+                  key={i}
                   className="rounded-xl overflow-hidden border border-gray-100 bg-gray-50 aspect-[4/5] relative flex items-center justify-center"
                 >
+                  {slot.status === 'pending' && (
+                    <div className="flex flex-col items-center gap-1.5 text-gray-300">
+                      <Clock className="w-5 h-5" />
+                      <span className="text-xs">Waiting…</span>
+                    </div>
+                  )}
+
                   {slot.status === 'loading' && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-400">
+                    <div className="flex flex-col items-center justify-center gap-2 text-gray-400">
                       <Loader2
                         className="w-6 h-6 animate-spin"
                         style={{ color: accentColor }}
@@ -201,20 +248,19 @@ export function CharacterCreator({ onDone, initial }: CharacterCreatorProps) {
                   )}
 
                   {slot.status === 'error' && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-red-400 p-2 text-center">
+                    <div className="flex flex-col items-center justify-center gap-1 text-red-400 p-2 text-center">
                       <AlertCircle className="w-5 h-5" />
-                      <span className="text-xs leading-tight">Failed — try regenerating</span>
+                      <span className="text-xs leading-tight">Failed</span>
                     </div>
                   )}
 
-                  <img
-                    src={slot.url}
-                    alt={MASTER_ANGLES[i]}
-                    onLoad={() => updateSlot(i, 'done')}
-                    onError={() => updateSlot(i, 'error')}
-                    className="w-full h-full object-cover"
-                    style={{ display: slot.status === 'done' ? 'block' : 'none' }}
-                  />
+                  {slot.status === 'done' && (
+                    <img
+                      src={slot.url}
+                      alt={MASTER_ANGLES[i]}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -223,9 +269,17 @@ export function CharacterCreator({ onDone, initial }: CharacterCreatorProps) {
               Front · Side · Three-quarter · Portrait
             </p>
 
-            {!anyDone && !anyLoading && (
+            {allFailed && (
               <p className="text-xs text-red-500 mt-1">
-                All images failed. Check your internet connection and try regenerating.
+                All images failed. Pollinations.ai may be busy — wait 30 s and try
+                regenerating.
+              </p>
+            )}
+
+            {anyDone && !generating && (
+              <p className="text-xs text-green-600 mt-1">
+                ✓ {doneCount} of {MASTER_ANGLES.length} reference views ready — you can
+                continue.
               </p>
             )}
           </div>

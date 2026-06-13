@@ -1,6 +1,6 @@
 /**
  * Pollinations.ai – completely free, no API key required.
- * Uses the Flux model for sketch/illustration style images.
+ * Free tier allows max 1 request queued per IP — always generate sequentially.
  * https://pollinations.ai/
  */
 
@@ -21,13 +21,13 @@ export interface GenerateOptions {
   seed: number;
   width?: number;
   height?: number;
-  accentColor?: string;
 }
 
 export function buildImageUrl(opts: GenerateOptions): string {
   const { prompt, seed, width = 512, height = 384 } = opts;
   const encoded = encodeURIComponent(prompt);
-  return `${BASE_URL}/${encoded}?width=${width}&height=${height}&seed=${seed}&nologo=true&model=flux&enhance=false`;
+  // No model= param — let Pollinations pick the free default
+  return `${BASE_URL}/${encoded}?width=${width}&height=${height}&seed=${seed}&nologo=true`;
 }
 
 export function buildPanelPrompt(
@@ -61,13 +61,30 @@ function hexToColorName(hex: string): string {
   return map[hex.toUpperCase()] ?? map[hex] ?? 'coral orange';
 }
 
-/** Preload an image into a browser Image element for later canvas use */
-export function preloadImage(url: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = url;
+/**
+ * Load a single image URL, retrying up to `retries` times with exponential backoff.
+ * No crossOrigin to avoid CORS cache poisoning on free CDN hosts.
+ */
+export function loadImage(url: string, retries = 2): Promise<boolean> {
+  return new Promise(resolve => {
+    let attempt = 0;
+
+    const tryLoad = () => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => {
+        if (attempt < retries) {
+          attempt++;
+          const delay = attempt * 3000; // 3 s, 6 s
+          setTimeout(tryLoad, delay);
+        } else {
+          resolve(false);
+        }
+      };
+      // Cache-bust on retry so stale 402 responses aren't cached
+      img.src = attempt === 0 ? url : `${url}&_r=${attempt}`;
+    };
+
+    tryLoad();
   });
 }

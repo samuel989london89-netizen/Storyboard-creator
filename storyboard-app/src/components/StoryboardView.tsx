@@ -13,7 +13,7 @@ import {
 import { Button } from './ui/Button';
 import type { Storyboard, PanelContent } from '../types';
 import { getLayout } from '../utils/layouts';
-import { buildImageUrl, buildPanelPrompt } from '../utils/pollinations';
+import { buildImageUrl, buildPanelPrompt, loadImage } from '../utils/pollinations';
 import { exportAsPng, exportAsSvg } from '../utils/export';
 import { saveStoryboard } from '../utils/storage';
 
@@ -143,13 +143,8 @@ export function StoryboardView({ storyboard, onEdit, onBack, onChange }: Storybo
       );
       setPanels(updated);
 
-      // Poll until the image responds (no crossOrigin to avoid CORS cache poisoning)
-      const loaded = await new Promise<boolean>(resolve => {
-        const img = new Image();
-        img.onload = () => resolve(true);
-        img.onerror = () => resolve(false);
-        img.src = url;
-      });
+      // Wait for image — uses retry with backoff, no crossOrigin
+      const loaded = await loadImage(url, 2);
 
       const finalStatus = loaded ? ('done' as const) : ('error' as const);
       const final = updated.map((p, i) =>
@@ -170,8 +165,12 @@ export function StoryboardView({ storyboard, onEdit, onBack, onChange }: Storybo
 
     let current = [...panels];
     const run = async () => {
-      for (const p of toGenerate) {
-        current = await generatePanel(p.panelDefId, current);
+      for (let i = 0; i < toGenerate.length; i++) {
+        current = await generatePanel(toGenerate[i].panelDefId, current);
+        // 2 s gap between requests to stay within Pollinations.ai free rate limit
+        if (i < toGenerate.length - 1) {
+          await new Promise(r => setTimeout(r, 2000));
+        }
       }
       // Auto-save after generation
       const updated = { ...storyboard, panels: current, updatedAt: Date.now() };
