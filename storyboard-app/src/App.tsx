@@ -11,7 +11,7 @@ import { Modal } from './components/ui/Modal';
 import type { Storyboard, Character, PanelContent } from './types';
 import { loadStoryboards, saveStoryboard } from './utils/storage';
 import { getLayout } from './utils/layouts';
-import { getHFToken } from './utils/imageGen';
+import { hasAnyKey, activeProvider } from './utils/imageGen';
 import './index.css';
 
 type Screen =
@@ -24,9 +24,9 @@ type Screen =
 
 export default function App() {
   const [storyboards, setStoryboards] = useState<Storyboard[]>(() => loadStoryboards());
-  // Show setup on first ever launch if no HF token configured
+  // Show setup on first ever launch if no key configured
   const [screen, setScreen] = useState<Screen>(() =>
-    getHFToken() ? { name: 'home' } : { name: 'setup' }
+    hasAnyKey() ? { name: 'home' } : { name: 'setup' }
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -136,7 +136,11 @@ export default function App() {
     onGenerateStoryboard(panels);
   };
 
-  const hasToken = !!getHFToken();
+  const hasToken = hasAnyKey();
+  const provider = activeProvider();
+  const providerLabel =
+    provider === 'gemini' ? '✦ Gemini connected' :
+    provider === 'hf' ? 'HF connected' : 'No key — unreliable';
 
   return (
     <div className="min-h-screen bg-[#F7F5F2]">
@@ -156,7 +160,9 @@ export default function App() {
             >
               <Settings className="w-4 h-4" />
               {hasToken ? (
-                <span className="text-green-600 font-medium">HF connected</span>
+                <span className={provider === 'gemini' ? 'text-green-600 font-medium' : 'text-blue-600 font-medium'}>
+                  {providerLabel}
+                </span>
               ) : (
                 <span className="text-amber-600 font-medium">Set up AI key</span>
               )}

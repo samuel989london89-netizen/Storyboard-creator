@@ -1,34 +1,51 @@
 /**
  * Unified image generation.
- * Primary: Hugging Face Inference API (free account, no credit card).
- * Fallback: Pollinations.ai (no key, but rate-limited and unreliable).
+ * Priority: Gemini (Imagen 3) → Hugging Face → Pollinations.ai (fallback, no key)
  */
 
 const HF_MODEL = 'stabilityai/stable-diffusion-xl-base-1.0';
 const HF_TOKEN_KEY = 'hf_api_token';
+const GEMINI_TOKEN_KEY = 'gemini_api_key';
 const POLLINATIONS_BASE = 'https://image.pollinations.ai/prompt';
+
+// ---- Key storage ----
 
 export function getHFToken(): string {
   return localStorage.getItem(HF_TOKEN_KEY) ?? '';
 }
-
 export function setHFToken(token: string): void {
-  if (token.trim()) {
-    localStorage.setItem(HF_TOKEN_KEY, token.trim());
-  } else {
-    localStorage.removeItem(HF_TOKEN_KEY);
-  }
+  token.trim()
+    ? localStorage.setItem(HF_TOKEN_KEY, token.trim())
+    : localStorage.removeItem(HF_TOKEN_KEY);
 }
+
+export function getGeminiKey(): string {
+  return localStorage.getItem(GEMINI_TOKEN_KEY) ?? '';
+}
+export function setGeminiKey(key: string): void {
+  key.trim()
+    ? localStorage.setItem(GEMINI_TOKEN_KEY, key.trim())
+    : localStorage.removeItem(GEMINI_TOKEN_KEY);
+}
+
+export function hasAnyKey(): boolean {
+  return !!(getGeminiKey() || getHFToken());
+}
+
+export type ActiveProvider = 'gemini' | 'hf' | 'pollinations';
+export function activeProvider(): ActiveProvider {
+  if (getGeminiKey()) return 'gemini';
+  if (getHFToken()) return 'hf';
+  return 'pollinations';
+}
+
+// ---- Helpers ----
 
 function sleep(ms: number) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-/** Convert a blob: URL to a base64 data: URL so it survives page reloads */
-export async function blobUrlToDataUrl(blobUrl: string): Promise<string> {
-  if (!blobUrl.startsWith('blob:')) return blobUrl;
-  const response = await fetch(blobUrl);
-  const blob = await response.blob();
+function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
@@ -37,21 +54,62 @@ export async function blobUrlToDataUrl(blobUrl: string): Promise<string> {
   });
 }
 
-/** Generate an image and return a URL (blob: or data: or https:) */
+// ---- Main entry point ----
+
 export async function generateImage(
   prompt: string,
   seed: number,
   width = 512,
   height = 384,
 ): Promise<string> {
-  const token = getHFToken();
+  const geminiKey = getGeminiKey();
+  if (geminiKey) return generateWithGemini(prompt, geminiKey);
 
-  if (token) {
-    return generateWithHF(prompt, token, width, height);
-  } else {
-    return loadFromPollinations(prompt, seed, width, height);
-  }
+  const hfToken = getHFToken();
+  if (hfToken) return generateWithHF(prompt, hfToken, width, height);
+
+  return loadFromPollinations(prompt, seed, width, height);
 }
+
+// ---- Gemini Imagen 3 ----
+
+async function generateWithGemini(prompt: string, apiKey: string): Promise<string> {
+  // Imagen 3 via Gemini API
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-015:predict?key=${apiKey}`;
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      instances: [{ prompt }],
+      parameters: { sampleCount: 1 },
+    }),
+  });
+
+  if (res.status === 400 || res.status === 401 || res.status === 403) {
+    throw new Error('INVALID_GEMINI_KEY');
+  }
+
+  if (res.status === 429) {
+    await sleep(10000);
+    return generateWithGemini(prompt, apiKey);
+  }
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Gemini error ${res.status}: ${body.slice(0, 120)}`);
+  }
+
+  const data = await res.json();
+  const b64 = data?.predictions?.[0]?.bytesBase64Encoded as string | undefined;
+  const mime = (data?.predictions?.[0]?.mimeType as string | undefined) ?? 'image/png';
+
+  if (!b64) throw new Error('Gemini: no image in response');
+
+  return `data:${mime};base64,${b64}`;
+}
+
+// ---- Hugging Face SDXL ----
 
 async function generateWithHF(
   prompt: string,
@@ -67,7 +125,7 @@ async function generateWithHF(
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'X-Wait-For-Model': 'true', // ask HF to wait instead of returning 503
+        'X-Wait-For-Model': 'true',
       },
       body: JSON.stringify({
         inputs: prompt,
@@ -76,18 +134,10 @@ async function generateWithHF(
     });
 
     if (res.ok) {
-      const blob = await res.blob();
-      // Convert immediately to data URL so it's persistent
-      return new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
+      return blobToDataUrl(await res.blob());
     }
 
     if (res.status === 503) {
-      // Model warming up
       const body = await res.json().catch(() => ({ estimated_time: 30 }));
       const wait = Math.min((body.estimated_time ?? 30) * 1000 + 2000, 90000);
       await sleep(wait);
@@ -99,9 +149,7 @@ async function generateWithHF(
       continue;
     }
 
-    if (res.status === 401 || res.status === 403) {
-      throw new Error('INVALID_TOKEN');
-    }
+    if (res.status === 401 || res.status === 403) throw new Error('INVALID_TOKEN');
 
     throw new Error(`HF error ${res.status}`);
   }
@@ -109,7 +157,8 @@ async function generateWithHF(
   throw new Error('HF: max retries exceeded');
 }
 
-/** Load one image from Pollinations (sequential use assumed by callers) */
+// ---- Pollinations.ai fallback ----
+
 function loadFromPollinations(
   prompt: string,
   seed: number,
@@ -137,4 +186,27 @@ function loadFromPollinations(
     };
     tryLoad();
   });
+}
+
+// ---- Validation helpers ----
+
+export async function validateGeminiKey(key: string): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-015:predict?key=${key}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instances: [{ prompt: 'test' }],
+          parameters: { sampleCount: 1 },
+        }),
+      }
+    );
+    // 400 means bad request (model needs more prompt) — key is valid
+    // 401/403 means key is invalid
+    return res.status !== 401 && res.status !== 403;
+  } catch {
+    return false;
+  }
 }

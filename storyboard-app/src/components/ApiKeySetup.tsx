@@ -1,70 +1,47 @@
 import { useState } from 'react';
-import { Key, ExternalLink, CheckCircle2, X } from 'lucide-react';
+import { Key, ExternalLink, CheckCircle2, Sparkles, Cpu } from 'lucide-react';
 import { Button } from './ui/Button';
-import { getHFToken, setHFToken } from '../utils/imageGen';
+import {
+  getHFToken, setHFToken,
+  getGeminiKey, setGeminiKey,
+  validateGeminiKey,
+  activeProvider,
+} from '../utils/imageGen';
 
 interface ApiKeySetupProps {
   onDone: () => void;
-  inline?: boolean; // show as banner vs full page
 }
 
-export function ApiKeySetup({ onDone, inline = false }: ApiKeySetupProps) {
-  const [token, setToken] = useState(getHFToken());
+export function ApiKeySetup({ onDone }: ApiKeySetupProps) {
+  const [geminiKey, setGeminiKeyState] = useState(getGeminiKey());
+  const [hfToken, setHfTokenState] = useState(getHFToken());
+  const [validating, setValidating] = useState(false);
+  const [geminiError, setGeminiError] = useState('');
   const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
-    setHFToken(token.trim());
+  const provider = activeProvider();
+
+  const handleSave = async () => {
+    setGeminiError('');
+
+    if (geminiKey.trim()) {
+      setValidating(true);
+      const ok = await validateGeminiKey(geminiKey.trim());
+      setValidating(false);
+      if (!ok) {
+        setGeminiError('Invalid Gemini API key. Check it and try again.');
+        return;
+      }
+      setGeminiKey(geminiKey.trim());
+    } else {
+      setGeminiKey('');
+    }
+
+    setHFToken(hfToken.trim());
+
     setSaved(true);
-    setTimeout(() => {
-      onDone();
-    }, 800);
+    setTimeout(() => onDone(), 700);
   };
-
-  const handleSkip = () => {
-    onDone();
-  };
-
-  if (inline) {
-    return (
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6">
-        <div className="flex items-start gap-3">
-          <Key className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-amber-800 mb-1">
-              Set up free image generation
-            </p>
-            <p className="text-xs text-amber-700 mb-3">
-              Add a free Hugging Face API token for reliable image generation. Takes 2 minutes, no credit card needed.
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="password"
-                value={token}
-                onChange={e => setToken(e.target.value)}
-                placeholder="hf_xxxxxxxxxxxxxxxx"
-                className="flex-1 px-3 py-1.5 text-sm border border-amber-300 rounded-lg focus:outline-none focus:border-amber-500 bg-white"
-              />
-              <Button size="sm" onClick={handleSave} loading={saved}>
-                {saved ? 'Saved!' : 'Save'}
-              </Button>
-              <button onClick={handleSkip} className="p-1.5 text-amber-400 hover:text-amber-600">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <a
-              href="https://huggingface.co/settings/tokens"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-amber-600 hover:underline mt-2"
-            >
-              <ExternalLink className="w-3 h-3" />
-              Get a free token at huggingface.co/settings/tokens
-            </a>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-xl mx-auto">
@@ -72,104 +49,103 @@ export function ApiKeySetup({ onDone, inline = false }: ApiKeySetupProps) {
         <div className="w-14 h-14 bg-[#E8622A]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <Key className="w-7 h-7 text-[#E8622A]" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Connect Image Generation</h2>
-        <p className="text-gray-500">
-          To generate sketch illustrations you need a free API token from Hugging Face.
-          Takes about 2 minutes. No credit card needed.
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Image Generation Keys</h2>
+        <p className="text-gray-500 text-sm">
+          Add at least one API key. Gemini is recommended — better quality, faster, free tier.
         </p>
       </div>
 
-      {/* Step by step */}
-      <div className="bg-gray-50 rounded-2xl p-5 mb-6 space-y-4">
-        <p className="text-sm font-semibold text-gray-700">How to get your free token:</p>
+      {/* Active provider badge */}
+      {(getGeminiKey() || getHFToken()) && (
+        <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-6 flex items-center gap-2 text-sm text-green-700">
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+          Currently using:{' '}
+          <strong>
+            {provider === 'gemini' ? 'Gemini Imagen 3' : provider === 'hf' ? 'Hugging Face SDXL' : 'Pollinations.ai'}
+          </strong>
+        </div>
+      )}
 
-        {[
-          {
-            n: 1,
-            text: 'Go to',
-            link: { href: 'https://huggingface.co/join', label: 'huggingface.co/join' },
-            after: 'and create a free account',
-          },
-          {
-            n: 2,
-            text: 'Go to',
-            link: {
-              href: 'https://huggingface.co/settings/tokens',
-              label: 'huggingface.co/settings/tokens',
-            },
-            after: '',
-          },
-          {
-            n: 3,
-            text: 'Click "New token", give it any name, select "Read" role, click Create',
-            link: null,
-            after: '',
-          },
-          {
-            n: 4,
-            text: 'Copy the token (starts with hf_) and paste it below',
-            link: null,
-            after: '',
-          },
-        ].map(step => (
-          <div key={step.n} className="flex gap-3">
-            <div className="w-6 h-6 rounded-full bg-[#E8622A] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
-              {step.n}
-            </div>
-            <p className="text-sm text-gray-700">
-              {step.text}{' '}
-              {step.link && (
-                <a
-                  href={step.link.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[#E8622A] underline inline-flex items-center gap-0.5"
-                >
-                  {step.link.label}
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              )}{' '}
-              {step.after}
-            </p>
-          </div>
-        ))}
-      </div>
+      {/* ---- Gemini section ---- */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
+        <div className="flex items-center gap-2 mb-1">
+          <Sparkles className="w-4 h-4 text-[#E8622A]" />
+          <span className="font-semibold text-gray-900">Gemini API Key</span>
+          <span className="text-xs bg-[#E8622A] text-white px-2 py-0.5 rounded-full">Recommended</span>
+        </div>
+        <p className="text-xs text-gray-500 mb-3">
+          Uses <strong>Imagen 3</strong> — best quality. Free tier: 100 images/day, no credit card.
+        </p>
 
-      {/* Token input */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
-          Your Hugging Face API token
-        </label>
+        <div className="bg-gray-50 rounded-xl p-3 mb-3 space-y-1.5 text-xs text-gray-600">
+          <p className="font-medium text-gray-700">How to get your key (2 min):</p>
+          <p>1. Go to{' '}
+            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer"
+              className="text-[#E8622A] underline inline-flex items-center gap-0.5">
+              aistudio.google.com/apikey <ExternalLink className="w-2.5 h-2.5" />
+            </a>
+          </p>
+          <p>2. Sign in with your Google account</p>
+          <p>3. Click <strong>"Create API key"</strong> → copy it</p>
+          <p>4. Paste below and click Save</p>
+        </div>
+
         <input
           type="password"
-          value={token}
-          onChange={e => setToken(e.target.value)}
-          placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[#E8622A] focus:ring-2 focus:ring-[#E8622A]/20 font-mono text-sm"
+          value={geminiKey}
+          onChange={e => { setGeminiKeyState(e.target.value); setGeminiError(''); }}
+          placeholder="AIzaSy…"
+          className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[#E8622A] focus:ring-2 focus:ring-[#E8622A]/20 font-mono text-sm"
         />
-        <p className="text-xs text-gray-400 mt-1">
-          Stored only in your browser's local storage. Never sent anywhere except Hugging Face.
+        {geminiError && (
+          <p className="text-xs text-red-500 mt-1.5">{geminiError}</p>
+        )}
+        {getGeminiKey() && !geminiKey.trim() && (
+          <p className="text-xs text-amber-600 mt-1.5">Leave blank to remove the saved key</p>
+        )}
+      </div>
+
+      {/* ---- HF section ---- */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Cpu className="w-4 h-4 text-gray-500" />
+          <span className="font-semibold text-gray-900">Hugging Face Token</span>
+          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">Alternative</span>
+        </div>
+        <p className="text-xs text-gray-500 mb-3">
+          Uses <strong>Stable Diffusion XL</strong>. Free tier: ~200 images/day, no credit card.{' '}
+          <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noreferrer"
+            className="text-[#E8622A] underline inline-flex items-center gap-0.5">
+            Get token <ExternalLink className="w-2.5 h-2.5" />
+          </a>
         </p>
+        <input
+          type="password"
+          value={hfToken}
+          onChange={e => setHfTokenState(e.target.value)}
+          placeholder="hf_xxxxxxxxxxxxxxxx"
+          className="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[#E8622A] focus:ring-2 focus:ring-[#E8622A]/20 font-mono text-sm"
+        />
       </div>
 
       <div className="flex gap-3">
         <Button
           icon={saved ? <CheckCircle2 className="w-4 h-4" /> : undefined}
-          disabled={!token.trim()}
+          disabled={!geminiKey.trim() && !hfToken.trim() && !getGeminiKey() && !getHFToken()}
           onClick={handleSave}
-          loading={saved}
+          loading={validating || saved}
           size="lg"
           className="flex-1"
         >
-          {saved ? 'Saved!' : 'Save and continue'}
+          {saved ? 'Saved!' : validating ? 'Validating…' : 'Save'}
         </Button>
-        <Button variant="ghost" onClick={handleSkip} size="lg">
-          Skip for now
+        <Button variant="ghost" onClick={onDone} size="lg">
+          Skip
         </Button>
       </div>
 
-      <p className="text-center text-xs text-gray-400 mt-4">
-        Skipping will use Pollinations.ai which may be unreliable.
+      <p className="text-center text-xs text-gray-400 mt-3">
+        Keys are stored only in your browser. Never shared with anyone.
       </p>
     </div>
   );
