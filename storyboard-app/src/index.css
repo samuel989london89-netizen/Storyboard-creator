@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --accent: #E8622A;
+    --accent-light: #F5A07A;
+    --accent-dark: #C04A18;
+  }
+  
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #F7F5F2;
+    color: #1a1a1a;
+  }
+}
+
+@layer utilities {
+  .panel-shadow {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.06);
+  }
+  .panel-shadow-hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 0 0 1px rgba(232,98,42,0.3);
+  }
+  .accent-ring {
+    outline: 2px dashed #E8622A;
+    outline-offset: 3px;
+  }
+}
