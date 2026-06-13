@@ -1,16 +1,21 @@
 import { useState } from 'react';
 import { v4 as uuid } from 'uuid';
+import { Settings } from 'lucide-react';
 import { HomePage } from './components/HomePage';
 import { CharacterCreator } from './components/CharacterCreator';
 import { LayoutPicker } from './components/LayoutPicker';
 import { PanelEditor } from './components/PanelEditor';
 import { StoryboardView } from './components/StoryboardView';
+import { ApiKeySetup } from './components/ApiKeySetup';
+import { Modal } from './components/ui/Modal';
 import type { Storyboard, Character, PanelContent } from './types';
 import { loadStoryboards, saveStoryboard } from './utils/storage';
 import { getLayout } from './utils/layouts';
+import { getHFToken } from './utils/imageGen';
 import './index.css';
 
 type Screen =
+  | { name: 'setup' }
   | { name: 'home' }
   | { name: 'character'; boardId?: string }
   | { name: 'layout'; boardId?: string }
@@ -19,7 +24,11 @@ type Screen =
 
 export default function App() {
   const [storyboards, setStoryboards] = useState<Storyboard[]>(() => loadStoryboards());
-  const [screen, setScreen] = useState<Screen>({ name: 'home' });
+  // Show setup on first ever launch if no HF token configured
+  const [screen, setScreen] = useState<Screen>(() =>
+    getHFToken() ? { name: 'home' } : { name: 'setup' }
+  );
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Draft state while creating/editing
   const [draftTitle, setDraftTitle] = useState('');
@@ -33,8 +42,6 @@ export default function App() {
       : null;
 
   const reload = () => setStoryboards(loadStoryboards());
-
-  // ---- Navigation helpers ----
 
   const startNew = () => {
     setDraftTitle('');
@@ -58,15 +65,12 @@ export default function App() {
     setStoryboards(prev => prev.filter(b => b.id !== id));
   };
 
-  // ---- Step 1: Character done ----
   const onCharacterDone = (character: Character) => {
     setDraftCharacter(character);
     setScreen({ name: 'layout' });
   };
 
-  // ---- Step 2: Layout selected → go to panel editor ----
   const onLayoutContinue = () => {
-    // Build empty panels based on layout
     const layout = getLayout(draftLayoutId);
     const panels: PanelContent[] = layout.panels.map((def, i) => ({
       panelDefId: def.id,
@@ -81,7 +85,6 @@ export default function App() {
     setScreen({ name: 'panels' });
   };
 
-  // ---- Step 3: Panels filled → generate ----
   const onGenerateStoryboard = (panels: PanelContent[]) => {
     const title = draftTitle.trim() || 'Untitled Storyboard';
     const id = uuid();
@@ -99,7 +102,6 @@ export default function App() {
     setScreen({ name: 'view', boardId: id });
   };
 
-  // ---- Edit from storyboard view back to panels ----
   const onEditFromView = () => {
     if (screen.name !== 'view') return;
     const board = storyboards.find(b => b.id === screen.boardId);
@@ -111,15 +113,12 @@ export default function App() {
     setScreen({ name: 'panels', boardId: screen.boardId });
   };
 
-  // Called when StoryboardView updates panels (after generation/regen)
   const onBoardChange = (updated: Storyboard) => {
     setStoryboards(prev => prev.map(b => (b.id === updated.id ? updated : b)));
   };
 
-  // ---- When editing panels from an existing board ----
   const onPanelEditDone = (panels: PanelContent[]) => {
     if (screen.name === 'panels' && screen.boardId) {
-      // Update existing board
       const board = storyboards.find(b => b.id === screen.boardId);
       if (board) {
         const updated: Storyboard = {
@@ -134,14 +133,43 @@ export default function App() {
         return;
       }
     }
-    // New board
     onGenerateStoryboard(panels);
   };
 
+  const hasToken = !!getHFToken();
+
   return (
     <div className="min-h-screen bg-[#F7F5F2]">
+      {/* Global header bar (shown on all screens except setup) */}
+      {screen.name !== 'setup' && (
+        <div className="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-40">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 h-12 flex items-center justify-between">
+            <button
+              className="font-black text-[#E8622A] text-lg leading-none"
+              onClick={() => setScreen({ name: 'home' })}
+            >
+              Storyboard AI
+            </button>
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 transition-colors px-2 py-1 rounded-lg hover:bg-gray-100"
+            >
+              <Settings className="w-4 h-4" />
+              {hasToken ? (
+                <span className="text-green-600 font-medium">HF connected</span>
+              ) : (
+                <span className="text-amber-600 font-medium">Set up AI key</span>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        {/* Title prompt modal (for new boards) */}
+        {screen.name === 'setup' && (
+          <ApiKeySetup onDone={() => setScreen({ name: 'home' })} />
+        )}
+
         {screen.name === 'character' && !screen.boardId && (
           <div className="mb-6">
             <div className="bg-white rounded-2xl border border-gray-200 p-4 flex items-center gap-3 shadow-sm">
@@ -170,10 +198,7 @@ export default function App() {
         )}
 
         {screen.name === 'character' && (
-          <CharacterCreator
-            onDone={onCharacterDone}
-            initial={draftCharacter ?? undefined}
-          />
+          <CharacterCreator onDone={onCharacterDone} initial={draftCharacter ?? undefined} />
         )}
 
         {screen.name === 'layout' && (
@@ -204,6 +229,11 @@ export default function App() {
           />
         )}
       </div>
+
+      {/* Settings modal */}
+      <Modal open={settingsOpen} onClose={() => setSettingsOpen(false)} title="Image Generation Settings">
+        <ApiKeySetup onDone={() => setSettingsOpen(false)} />
+      </Modal>
     </div>
   );
 }

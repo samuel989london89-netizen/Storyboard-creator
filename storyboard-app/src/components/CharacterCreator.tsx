@@ -3,7 +3,8 @@ import { v4 as uuid } from 'uuid';
 import { Wand2, RefreshCw, ChevronRight, Palette, Loader2, AlertCircle, Clock } from 'lucide-react';
 import { Button } from './ui/Button';
 import type { Character } from '../types';
-import { buildMasterPrompt, buildImageUrl, MASTER_ANGLES } from '../utils/pollinations';
+import { buildMasterPrompt, MASTER_ANGLES } from '../utils/pollinations';
+import { generateImage, getHFToken } from '../utils/imageGen';
 
 const ACCENT_COLORS = [
   { hex: '#E8622A', label: 'Coral' },
@@ -38,14 +39,14 @@ export function CharacterCreator({ onDone, initial }: CharacterCreatorProps) {
   const [error, setError] = useState('');
   const cancelRef = useRef(false);
 
-  /** Load a single image — no crossOrigin to avoid CORS cache poisoning */
-  const loadOne = (url: string): Promise<boolean> =>
-    new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => resolve(true);
-      img.onerror = () => resolve(false);
-      img.src = url;
-    });
+  /** Load a single image — uses HF API if token is set, else Pollinations */
+  const loadOne = async (prompt: string, seed: number): Promise<string | null> => {
+    try {
+      return await generateImage(prompt, seed, 400, 500);
+    } catch {
+      return null;
+    }
+  };
 
   const generateMasters = useCallback(async () => {
     if (!description.trim()) {
@@ -59,28 +60,27 @@ export function CharacterCreator({ onDone, initial }: CharacterCreatorProps) {
     // Show all 4 slots immediately as "pending"
     setSlots(MASTER_ANGLES.map(() => ({ url: '', status: 'pending' })));
 
-    // Generate one at a time — Pollinations allows max 1 queued per IP
+    // Generate one at a time
     for (let i = 0; i < MASTER_ANGLES.length; i++) {
       if (cancelRef.current) break;
 
-      const url = buildImageUrl({
-        prompt: buildMasterPrompt(description, MASTER_ANGLES[i], accentColor),
-        seed,
-        width: 400,
-        height: 500,
-      });
+      const prompt = buildMasterPrompt(description, MASTER_ANGLES[i], accentColor);
 
       // Mark this slot as loading
-      setSlots(prev => prev.map((s, idx) => (idx === i ? { url, status: 'loading' } : s)));
+      setSlots(prev => prev.map((s, idx) => (idx === i ? { ...s, status: 'loading' } : s)));
 
-      const ok = await loadOne(url);
+      const resultUrl = await loadOne(prompt, seed + i);
 
       setSlots(prev =>
-        prev.map((s, idx) => (idx === i ? { url, status: ok ? 'done' : 'error' } : s))
+        prev.map((s, idx) =>
+          idx === i
+            ? { url: resultUrl ?? '', status: resultUrl ? 'done' : 'error' }
+            : s
+        )
       );
 
-      // Wait 2 s before next request to stay within the free rate limit
-      if (i < MASTER_ANGLES.length - 1 && !cancelRef.current) {
+      // Small gap between requests when using Pollinations fallback
+      if (!getHFToken() && i < MASTER_ANGLES.length - 1 && !cancelRef.current) {
         await new Promise(r => setTimeout(r, 2000));
       }
     }

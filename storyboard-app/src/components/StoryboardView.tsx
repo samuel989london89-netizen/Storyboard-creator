@@ -13,7 +13,8 @@ import {
 import { Button } from './ui/Button';
 import type { Storyboard, PanelContent } from '../types';
 import { getLayout } from '../utils/layouts';
-import { buildImageUrl, buildPanelPrompt, loadImage } from '../utils/pollinations';
+import { buildPanelPrompt } from '../utils/pollinations';
+import { generateImage, getHFToken } from '../utils/imageGen';
 import { exportAsPng, exportAsSvg } from '../utils/export';
 import { saveStoryboard } from '../utils/storage';
 
@@ -126,29 +127,29 @@ export function StoryboardView({ storyboard, onEdit, onBack, onChange }: Storybo
       if (idx < 0) return panelList;
 
       const panel = panelList[idx];
-      const url = buildImageUrl({
-        prompt: buildPanelPrompt(
-          panel.description,
-          storyboard.character.description,
-          storyboard.character.accentColor
-        ),
-        seed: storyboard.character.styleSeed + idx, // offset per panel for variety
-        width: 512,
-        height: 384,
-      });
-
-      // Set the URL immediately and mark as generating — the <img> tag will start loading on its own
-      const updated = panelList.map((p, i) =>
-        i === idx ? { ...p, imageUrl: url, imageStatus: 'generating' as const } : p
+      const prompt = buildPanelPrompt(
+        panel.description,
+        storyboard.character.description,
+        storyboard.character.accentColor
       );
-      setPanels(updated);
 
-      // Wait for image — uses retry with backoff, no crossOrigin
-      const loaded = await loadImage(url, 2);
+      // Mark as generating
+      const updating = panelList.map((p, i) =>
+        i === idx ? { ...p, imageStatus: 'generating' as const } : p
+      );
+      setPanels(updating);
 
-      const finalStatus = loaded ? ('done' as const) : ('error' as const);
-      const final = updated.map((p, i) =>
-        i === idx ? { ...p, imageStatus: finalStatus } : p
+      let imageUrl: string | undefined;
+      let finalStatus: 'done' | 'error' = 'error';
+      try {
+        imageUrl = await generateImage(prompt, storyboard.character.styleSeed + idx, 512, 384);
+        finalStatus = 'done';
+      } catch {
+        finalStatus = 'error';
+      }
+
+      const final = updating.map((p, i) =>
+        i === idx ? { ...p, imageUrl, imageStatus: finalStatus } : p
       );
       setPanels(final);
       return final;
@@ -167,8 +168,8 @@ export function StoryboardView({ storyboard, onEdit, onBack, onChange }: Storybo
     const run = async () => {
       for (let i = 0; i < toGenerate.length; i++) {
         current = await generatePanel(toGenerate[i].panelDefId, current);
-        // 2 s gap between requests to stay within Pollinations.ai free rate limit
-        if (i < toGenerate.length - 1) {
+        // 2 s gap between requests only when falling back to Pollinations
+        if (!getHFToken() && i < toGenerate.length - 1) {
           await new Promise(r => setTimeout(r, 2000));
         }
       }
