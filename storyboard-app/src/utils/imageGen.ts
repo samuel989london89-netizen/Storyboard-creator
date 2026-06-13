@@ -1,12 +1,19 @@
 /**
  * Unified image generation.
- * Priority: Gemini (Imagen 3) → Hugging Face → Pollinations.ai (fallback, no key)
+ * Priority: Gemini → Hugging Face → Pollinations.ai (fallback, no key)
  */
 
 const HF_MODEL = 'stabilityai/stable-diffusion-xl-base-1.0';
 const HF_TOKEN_KEY = 'hf_api_token';
 const GEMINI_TOKEN_KEY = 'gemini_api_key';
 const POLLINATIONS_BASE = 'https://image.pollinations.ai/prompt';
+
+// Current working Gemini image models (try in order)
+const GEMINI_IMAGE_MODELS = [
+  'gemini-2.5-flash-image',
+  'gemini-3.1-flash-image-preview',
+  'gemini-2.0-flash-preview-image-generation',
+];
 
 // ---- Key storage ----
 
@@ -72,54 +79,70 @@ export async function generateImage(
 }
 
 // ---- Gemini image generation ----
-// Uses gemini-2.0-flash-preview-image-generation (free tier, no billing required)
+// Tries models in order; TEXT must come before IMAGE in responseModalities
 
 async function generateWithGemini(prompt: string, apiKey: string): Promise<string> {
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`;
+  let lastError = '';
+
+  for (const model of GEMINI_IMAGE_MODELS) {
+    try {
+      const result = await tryGeminiModel(prompt, apiKey, model);
+      if (result) return result;
+    } catch (err) {
+      lastError = String(err);
+      // 404 = model not found, try next
+      if (lastError.includes('404') || lastError.includes('NOT_FOUND')) continue;
+      // Auth errors — no point trying other models
+      if (lastError.includes('401') || lastError.includes('403') || lastError.includes('INVALID')) {
+        throw new Error('INVALID_GEMINI_KEY');
+      }
+      // 429 rate limit — wait and retry same model
+      if (lastError.includes('429')) {
+        await sleep(10000);
+        const result = await tryGeminiModel(prompt, apiKey, model);
+        if (result) return result;
+      }
+    }
+  }
+
+  throw new Error(`Gemini: all models failed. Last error: ${lastError}`);
+}
+
+async function tryGeminiModel(prompt: string, apiKey: string, model: string): Promise<string | null> {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const res = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { responseModalities: ['IMAGE', 'TEXT'] },
+      // TEXT must come before IMAGE — otherwise API returns empty parts silently
+      generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
     }),
   });
 
-  if (res.status === 400 || res.status === 401 || res.status === 403) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(`INVALID_GEMINI_KEY: ${JSON.stringify(body).slice(0, 120)}`);
-  }
-
-  if (res.status === 429) {
-    await sleep(10000);
-    return generateWithGemini(prompt, apiKey);
-  }
+  if (res.status === 404) throw new Error('404 NOT_FOUND');
+  if (res.status === 401 || res.status === 403) throw new Error('INVALID_GEMINI_KEY');
+  if (res.status === 429) throw new Error('429 rate limit');
 
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(`Gemini error ${res.status}: ${body.slice(0, 120)}`);
+    throw new Error(`Gemini ${res.status}: ${body.slice(0, 200)}`);
   }
 
   const data = await res.json();
-
-  // Extract inline image from generateContent response
   const parts: Array<{ inlineData?: { mimeType: string; data: string }; text?: string }> =
     data?.candidates?.[0]?.content?.parts ?? [];
 
   const imagePart = parts.find(p => p.inlineData?.data);
-  if (!imagePart?.inlineData) {
-    throw new Error('Gemini: no image in response');
-  }
+  if (!imagePart?.inlineData) return null; // model returned text only, try next
 
   return `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
 }
 
 export async function validateGeminiKey(key: string): Promise<boolean> {
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`
-    );
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
     return res.ok;
   } catch {
     return false;

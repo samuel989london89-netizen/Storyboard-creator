@@ -30,12 +30,14 @@ function PanelCell({
   accentColor,
   colSpan,
   rowSpan,
+  errorMsg,
   onRegenerate,
 }: {
   panel: PanelContent;
   accentColor: string;
   colSpan: number;
   rowSpan: number;
+  errorMsg?: string;
   onRegenerate: (panelDefId: string) => void;
 }) {
   const isGenerating = panel.imageStatus === 'generating';
@@ -83,9 +85,14 @@ function PanelCell({
         )}
 
         {isError && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50 text-red-400">
-            <XCircle className="w-8 h-8 mb-2" />
-            <p className="text-xs">Generation failed — click Redo</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50 text-red-400 p-3 text-center">
+            <XCircle className="w-7 h-7 mb-1 flex-shrink-0" />
+            <p className="text-xs font-medium">Generation failed</p>
+            {errorMsg && (
+              <p className="text-xs mt-1 text-red-400 leading-tight break-all line-clamp-3">
+                {errorMsg}
+              </p>
+            )}
           </div>
         )}
         {panel.imageStatus === 'empty' && (
@@ -120,6 +127,7 @@ export function StoryboardView({ storyboard, onEdit, onBack, onChange }: Storybo
   const [exporting, setExporting] = useState<'png' | 'svg' | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [panels, setPanels] = useState<PanelContent[]>(storyboard.panels);
+  const [panelErrors, setPanelErrors] = useState<Record<string, string>>({});
 
   const generatePanel = useCallback(
     async (panelDefId: string, panelList: PanelContent[]): Promise<PanelContent[]> => {
@@ -144,9 +152,11 @@ export function StoryboardView({ storyboard, onEdit, onBack, onChange }: Storybo
       try {
         imageUrl = await generateImage(prompt, storyboard.character.styleSeed + idx, 512, 384);
         finalStatus = 'done';
+        setPanelErrors(prev => { const n = { ...prev }; delete n[panelDefId]; return n; });
       } catch (err) {
         console.error('Panel generation error:', err);
         finalStatus = 'error';
+        setPanelErrors(prev => ({ ...prev, [panelDefId]: String(err) }));
       }
 
       const final = updating.map((p, i) =>
@@ -319,6 +329,7 @@ export function StoryboardView({ storyboard, onEdit, onBack, onChange }: Storybo
               accentColor={storyboard.character.accentColor}
               colSpan={def.colSpan}
               rowSpan={def.rowSpan}
+              errorMsg={panelErrors[def.id]}
               onRegenerate={handleRegenerate}
             />
           ))}
