@@ -1,7 +1,12 @@
-name: Send weekly newsletter
+name: Send 2894_signals newsletter
 
 on:
+  schedule:
+    # Lunes 09:00 UTC — 2h despues de generacion (envia si hay informe reciente)
+    - cron: "0 9 * * 1"
   push:
+    branches:
+      - main
     paths:
       - "reports/*-ai-news.md"
   workflow_dispatch:
@@ -16,10 +21,14 @@ jobs:
         run: |
           node -e "
           const s = require('./config/subscribers.json');
-          const n = (s.affiliates || []).length;
-          if (n > 5) { console.error('Max 5 affiliates'); process.exit(1); }
-          console.log('Subscribers OK:', n, 'affiliates');
+          const list = [s.owner_email, ...(s.affiliates||[])].filter(Boolean);
+          if ((s.affiliates||[]).length > 5) { console.error('Max 5 affiliates'); process.exit(1); }
+          console.log('Destinatarios:', list.join(', '));
           "
+
+      - name: Check report freshness (solo en cron de lunes)
+        if: github.event_name == 'schedule'
+        run: node scripts/check-report-fresh.js
 
       - name: Send email via Resend
         env:

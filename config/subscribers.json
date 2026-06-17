@@ -1,6 +1,8 @@
 {
   "owner_email": "Slondon99@outlook.es",
-  "affiliates": [],
+  "affiliates": [
+    "juliosatorre@gmail.com"
+  ],
   "max_affiliates": 5,
-  "notes": "Anade hasta 5 correos en affiliates. El owner recibe copia si esta definido."
+  "notes": "Owner + hasta 5 affiliates reciben el mismo informe 2894_signals cada lunes."
 }

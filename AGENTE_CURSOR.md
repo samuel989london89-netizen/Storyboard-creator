@@ -28,12 +28,11 @@ Despues del informe, pide:
 
 ## Newsletter automatica (correo semanal)
 
-Guia completa: `docs/SETUP-NEWSLETTER.md`
+- Guia completa lunes automatico: `docs/AUTOMATICO-LUNES.md`
+- Guia Resend paso a paso: `docs/PASO-A-PASO.md`
+- Estetica: `docs/PERSONALIZAR-ESTETICA.md`
 
-Resumen:
-- 1 informe/semana para max 5 afiliados
-- Envio por email gratis (Resend + GitHub Actions)
-- Proteccion de creditos Cursor con `config/budget.json`
+Destinatarios: Slondon99@outlook.es + juliosatorre@gmail.com (+ hasta 3 afiliados mas)
 
 ## Que apruebas tu
 
