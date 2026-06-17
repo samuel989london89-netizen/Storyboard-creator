@@ -4,14 +4,14 @@ Si prefieres leer el newsletter en el navegador, sin depender del email.
 
 ## URL publica
 
-Cuando GitHub Pages este activo:
+Cuando GitHub Pages este activo, tu enlace es:
 
-**https://samuel989london89-netizen.github.io/Storyboard-creator/news/**
+```bash
+node scripts/get-public-url.js
+```
 
-(Ahi siempre esta la **ultima edicion**.)
-
-Ediciones anteriores:
-**https://samuel989london89-netizen.github.io/Storyboard-creator/news/2026-06-17.html**
+**Sin dominio propio**, GitHub incluye tu usuario en la URL.  
+Para un enlace limpio (sin eso): `docs/ENLACE-LIMPIO.md`
 
 ---
 
@@ -55,7 +55,8 @@ Aprobado — genera el informe y publícalo online, pero NO envíes email
 Mientras no tengas dominio en Resend, puedes enviarle el **enlace web** por WhatsApp:
 
 ```
-https://samuel989london89-netizen.github.io/Storyboard-creator/news/
+https://TU-ENLACE/news/
 ```
+(Obtén el enlace exacto con `node scripts/get-public-url.js`)
 
 Gratis y sin configurar correo.

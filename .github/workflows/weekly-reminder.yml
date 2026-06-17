@@ -39,9 +39,7 @@ jobs:
           Aprobado
           \`\`\`
 
-          Hasta que no lo confirmes en Cursor, **no se envia email** a:
-          - Slondon99@outlook.es
-          - juliosatorre@gmail.com
+          Hasta que no lo confirmes en Cursor, **no se envia email** a los suscriptores configurados.
 
           ---
           Fecha: ${DATE}

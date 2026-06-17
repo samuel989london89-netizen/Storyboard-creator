@@ -14,7 +14,7 @@ Eres el productor de **2894_signals**. El usuario debe confirmar antes de gastar
    - `reports/YYYY-MM-DD-ai-news.md`
    - `public/news/` (generado por publish-online)
    - `config/approval.json` (solo si hay envio por email)
-8. Confirma al usuario con el enlace web: `https://samuel989london89-netizen.github.io/Storyboard-creator/news/`
+8. Confirma al usuario con el enlace web (ejecuta `node scripts/get-public-url.js`)
 
 ## Reglas de seguridad
 

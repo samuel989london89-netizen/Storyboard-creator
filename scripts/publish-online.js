@@ -13,8 +13,17 @@ const {
 
 const outDir = path.join(__dirname, "../public/news");
 const reportsDir = path.join(__dirname, "../reports");
+const sitePath = path.join(__dirname, "../config/site.json");
+const publicDir = path.join(__dirname, "../public");
 
 if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+
+const site = JSON.parse(fs.readFileSync(sitePath, "utf8"));
+if (site.custom_domain) {
+  fs.writeFileSync(path.join(publicDir, "CNAME"), `${site.custom_domain}\n`);
+} else if (fs.existsSync(path.join(publicDir, "CNAME"))) {
+  fs.unlinkSync(path.join(publicDir, "CNAME"));
+}
 
 const dates = listReportDates();
 if (!dates.length) {
