@@ -1,0 +1,5 @@
+{
+  "test_mode": true,
+  "test_only_email": "samuel989london89@gmail.com",
+  "notes": "test_mode=true: solo envia al Gmail verificado en Resend hasta que verifiques dominio. Pon test_mode=false cuando tengas dominio."
+}

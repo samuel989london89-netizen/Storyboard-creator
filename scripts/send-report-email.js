@@ -31,6 +31,15 @@ function getLatestReport() {
 }
 
 function getRecipients() {
+  const testPath = path.join(__dirname, "../config/resend-test.json");
+  if (fs.existsSync(testPath)) {
+    const test = JSON.parse(fs.readFileSync(testPath, "utf8"));
+    if (test.test_mode && test.test_only_email) {
+      console.log("Modo prueba Resend: solo envia a", test.test_only_email);
+      return [test.test_only_email];
+    }
+  }
+
   const subs = JSON.parse(fs.readFileSync(subscribersPath, "utf8"));
   const max = subs.max_affiliates ?? 5;
   const affiliates = (subs.affiliates ?? []).slice(0, max);
@@ -73,7 +82,21 @@ async function send() {
   });
 
   const recipients = getRecipients();
+  const allSubs = (() => {
+    const subs = JSON.parse(fs.readFileSync(subscribersPath, "utf8"));
+    return [subs.owner_email, ...(subs.affiliates || [])].filter(Boolean);
+  })();
   const subject = `${cfg.subject_prefix} · ${parsed.date_label}`;
+
+  const testBanner =
+    recipients.length === 1 && allSubs.length > 1
+      ? `<p style="background:#4CBFFF;color:#000;padding:12px 16px;font-family:Helvetica,Arial,sans-serif;font-size:13px;margin:0 0 20px;border:1px solid #000;"><strong>Modo prueba Resend.</strong> Este email iba dirigido a: ${allSubs.join(", ")}. Verifica un dominio en Resend para envio real.</p>`
+      : "";
+
+  const htmlWithBanner = html.replace(
+    /<body([^>]*)>/,
+    `<body$1>${testBanner}`
+  );
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -85,7 +108,7 @@ async function send() {
       from: from.includes("<") ? from : `2894_signals <${from}>`,
       to: recipients,
       subject,
-      html,
+      html: htmlWithBanner,
     }),
   });
 
