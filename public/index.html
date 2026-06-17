@@ -3,55 +3,91 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IA Creativa — Newsletter semanal</title>
+  <title>2894_signals — Alta newsletter</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 48px auto; padding: 0 16px; }
-    h1 { font-size: 1.4rem; }
-    input, button { width: 100%; padding: 12px; margin: 8px 0; font-size: 1rem; box-sizing: border-box; }
-    button { background: #111; color: #fff; border: none; cursor: pointer; border-radius: 6px; }
-    .note { color: #666; font-size: 0.9rem; }
-    .ok { color: #0a0; }
-    .err { color: #c00; }
+    :root { --bg: #020617; --card: #0f172a; --accent: #fb923c; --text: #f1f5f9; --muted: #64748b; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: Georgia, "Times New Roman", serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 40px 36px;
+      max-width: 420px;
+      width: 100%;
+    }
+    h1 { margin: 0; font-size: 2rem; font-weight: 400; }
+    h1 span { color: var(--accent); }
+    .tag { color: var(--muted); font-size: 0.85rem; margin: 12px 0 28px; font-family: system-ui, sans-serif; }
+    label { font-family: system-ui, sans-serif; font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+    input, button {
+      width: 100%;
+      padding: 14px;
+      margin: 8px 0 16px;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #020617;
+      color: var(--text);
+      font-family: system-ui, sans-serif;
+    }
+    button {
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      border: none;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .note { color: var(--muted); font-size: 0.85rem; font-family: system-ui, sans-serif; }
+    .ok { color: #4ade80; }
+    .err { color: #f87171; }
   </style>
 </head>
 <body>
-  <h1>Newsletter IA Creativa</h1>
-  <p class="note">Un informe semanal. Maximo 5 afiliados.</p>
+  <div class="card">
+    <h1>2894<span>_signals</span></h1>
+    <p class="tag">Señales semanales de IA creativa · máx. 5 plazas</p>
 
-  <form id="form">
-    <label for="email">Tu correo</label>
-    <input type="email" id="email" required placeholder="tu@empresa.com" />
-    <button type="submit">Solicitar alta</button>
-  </form>
-  <p id="msg" class="note"></p>
+    <form id="form">
+      <label for="email">Tu correo</label>
+      <input type="email" id="email" required placeholder="tu@empresa.com" />
+      <button type="submit">Solicitar plaza</button>
+    </form>
+    <p id="msg" class="note"></p>
+  </div>
 
   <script>
-    // Cambia esto por tu Formspree ID gratis: https://formspree.io
-  const FORMSPREE_ID = "TU_FORMSPREE_ID";
-
+    const FORMSPREE_ID = "TU_FORMSPREE_ID";
     document.getElementById("form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const email = document.getElementById("email").value.trim();
       const msg = document.getElementById("msg");
-
       if (FORMSPREE_ID === "TU_FORMSPREE_ID") {
-        msg.innerHTML = "Configura FORMSPREE_ID en public/index.html o pide al admin que anada tu correo en config/subscribers.json";
+        msg.textContent = "Contacta al administrador para alta manual (máx. 5 afiliados).";
         msg.className = "err";
         return;
       }
-
       try {
         const res = await fetch(`https://formspree.io/f/${FORMSPREE_ID}`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ email, tipo: "alta-newsletter-ia-creativa" }),
+          body: JSON.stringify({ email, newsletter: "2894_signals" }),
         });
-        if (res.ok) {
-          msg.textContent = "Solicitud enviada. Te confirmaremos si hay plaza (max 5).";
-          msg.className = "ok";
-        } else throw new Error("Error al enviar");
+        msg.textContent = res.ok ? "Solicitud enviada. Te confirmaremos si hay plaza." : "Error al enviar.";
+        msg.className = res.ok ? "ok" : "err";
       } catch {
-        msg.textContent = "No se pudo enviar. Contacta al administrador.";
+        msg.textContent = "No se pudo enviar.";
         msg.className = "err";
       }
     });

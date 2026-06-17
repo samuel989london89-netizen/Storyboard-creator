@@ -1,4 +1,6 @@
-# Newsletter semanal IA creativa — configuracion
+# 2894_signals — configuracion newsletter
+
+Newsletter: **2894_signals** · Plantilla fija en `templates/2894_signals.html` (se diseña una vez, se reutiliza cada semana sin creditos extra).
 
 ## Que hace el sistema
 

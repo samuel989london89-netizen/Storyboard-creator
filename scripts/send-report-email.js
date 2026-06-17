@@ -1,13 +1,19 @@
 #!/usr/bin/env node
 /**
- * Envia el ultimo informe a owner + affiliates (max 5).
- * Requiere secretos: RESEND_API_KEY, FROM_EMAIL
+ * Envia el ultimo informe usando la plantilla fija 2894_signals.
+ * La estetica se define una vez en templates/2894_signals.html — sin creditos extra.
  */
 const fs = require("fs");
 const path = require("path");
+const { parseReport } = require("./parse-report");
 
 const reportsDir = path.join(__dirname, "../reports");
 const subscribersPath = path.join(__dirname, "../config/subscribers.json");
+const newsletterPath = path.join(__dirname, "../config/newsletter.json");
+
+function loadConfig() {
+  return JSON.parse(fs.readFileSync(newsletterPath, "utf8"));
+}
 
 function getLatestReport() {
   const files = fs
@@ -34,19 +40,12 @@ function getRecipients() {
   return [...emails];
 }
 
-function markdownToHtml(md) {
-  return md
-    .replace(/^### (.*)$/gm, "<h3>$1</h3>")
-    .replace(/^## (.*)$/gm, "<h2>$1</h2>")
-    .replace(/^# (.*)$/gm, "<h1>$1</h1>")
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>')
-    .replace(/^- (.*)$/gm, "<li>$1</li>")
-    .replace(/(<li>.*<\/li>\n?)+/g, (m) => `<ul>${m}</ul>`)
-    .replace(/\n\n/g, "</p><p>")
-    .replace(/^(?!<[hul])/gm, "")
-    .replace(/^/, "<p>")
-    .replace(/$/, "</p>");
+function renderTemplate(templatePath, data) {
+  let html = fs.readFileSync(templatePath, "utf8");
+  for (const [key, value] of Object.entries(data)) {
+    html = html.replaceAll(`{{${key}}}`, value);
+  }
+  return html;
 }
 
 async function send() {
@@ -56,17 +55,23 @@ async function send() {
     throw new Error("Faltan RESEND_API_KEY o FROM_EMAIL en secretos de GitHub");
   }
 
+  const cfg = loadConfig();
   const report = getLatestReport();
+  const parsed = parseReport(report.content, report.date);
+  const templatePath = path.join(__dirname, "..", cfg.template);
+
+  const html = renderTemplate(templatePath, {
+    DATE: report.date,
+    DATE_LABEL: parsed.date_label,
+    YEAR: parsed.year,
+    EXECUTIVE_HTML: parsed.executive_html,
+    NEWS_HTML: parsed.news_html,
+    RADAR_HTML: parsed.radar_html,
+    ACTIONS_HTML: parsed.actions_html,
+  });
+
   const recipients = getRecipients();
-  const subject = `Informe semanal IA creativa — ${report.date}`;
-  const html = `
-    <div style="font-family: sans-serif; max-width: 720px; margin: 0 auto;">
-      <p style="color:#666;">Newsletter automatica. Un solo informe semanal para el equipo creativo.</p>
-      ${markdownToHtml(report.content)}
-      <hr/>
-      <p style="color:#999;font-size:12px;">Generado desde Storyboard-creator · ${report.file}</p>
-    </div>
-  `;
+  const subject = `${cfg.subject_prefix} · ${parsed.date_label}`;
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -75,7 +80,7 @@ async function send() {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from,
+      from: from.includes("<") ? from : `2894_signals <${from}>`,
       to: recipients,
       subject,
       html,
@@ -88,7 +93,8 @@ async function send() {
   }
 
   const data = await res.json();
-  console.log("Email enviado a:", recipients.join(", "));
+  console.log("2894_signals enviado a:", recipients.join(", "));
+  console.log("Plantilla:", cfg.template);
   console.log("Resend id:", data.id);
 }
 
