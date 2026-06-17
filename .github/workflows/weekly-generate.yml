@@ -1,0 +1,46 @@
+name: Weekly report generation
+
+on:
+  schedule:
+    # Lunes 08:00 UTC
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  trigger-cursor-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check monthly budget
+        id: budget
+        run: node scripts/check-budget.js
+        continue-on-error: true
+
+      - name: Stop if budget exceeded
+        if: steps.budget.outcome == 'failure'
+        run: |
+          echo "Generacion cancelada para proteger creditos."
+          exit 0
+
+      - name: Create issue to trigger Cursor agent
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          gh label create "weekly-report" --color "0E8A16" 2>/dev/null || true
+          gh issue create \
+            --title "Generar informe semanal IA creativa — $DATE" \
+            --label "weekly-report" \
+            --body "@cursor
+
+          Lee prompts/ai-news-creative-lite.md, investiga novedades de esta semana y genera el informe.
+          Guardalo en reports/${DATE}-ai-news.md
+          Luego ejecuta: node scripts/record-generation.js
+          Haz commit y push de reports/ y config/budget.json
+
+          IMPORTANTE: Si config/budget.json indica limite alcanzado, NO generes informe."

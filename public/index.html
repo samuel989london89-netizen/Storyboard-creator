@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IA Creativa — Newsletter semanal</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 48px auto; padding: 0 16px; }
+    h1 { font-size: 1.4rem; }
+    input, button { width: 100%; padding: 12px; margin: 8px 0; font-size: 1rem; box-sizing: border-box; }
+    button { background: #111; color: #fff; border: none; cursor: pointer; border-radius: 6px; }
+    .note { color: #666; font-size: 0.9rem; }
+    .ok { color: #0a0; }
+    .err { color: #c00; }
+  </style>
+</head>
+<body>
+  <h1>Newsletter IA Creativa</h1>
+  <p class="note">Un informe semanal. Maximo 5 afiliados.</p>
+
+  <form id="form">
+    <label for="email">Tu correo</label>
+    <input type="email" id="email" required placeholder="tu@empresa.com" />
+    <button type="submit">Solicitar alta</button>
+  </form>
+  <p id="msg" class="note"></p>
+
+  <script>
+    // Cambia esto por tu Formspree ID gratis: https://formspree.io
+  const FORMSPREE_ID = "TU_FORMSPREE_ID";
+
+    document.getElementById("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value.trim();
+      const msg = document.getElementById("msg");
+
+      if (FORMSPREE_ID === "TU_FORMSPREE_ID") {
+        msg.innerHTML = "Configura FORMSPREE_ID en public/index.html o pide al admin que anada tu correo en config/subscribers.json";
+        msg.className = "err";
+        return;
+      }
+
+      try {
+        const res = await fetch(`https://formspree.io/f/${FORMSPREE_ID}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ email, tipo: "alta-newsletter-ia-creativa" }),
+        });
+        if (res.ok) {
+          msg.textContent = "Solicitud enviada. Te confirmaremos si hay plaza (max 5).";
+          msg.className = "ok";
+        } else throw new Error("Error al enviar");
+      } catch {
+        msg.textContent = "No se pudo enviar. Contacta al administrador.";
+        msg.className = "err";
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+name: Send weekly newsletter
+
+on:
+  push:
+    paths:
+      - "reports/*-ai-news.md"
+  workflow_dispatch:
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate subscribers (max 5 affiliates)
+        run: |
+          node -e "
+          const s = require('./config/subscribers.json');
+          const n = (s.affiliates || []).length;
+          if (n > 5) { console.error('Max 5 affiliates'); process.exit(1); }
+          console.log('Subscribers OK:', n, 'affiliates');
+          "
+
+      - name: Send email via Resend
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+        run: node scripts/send-report-email.js

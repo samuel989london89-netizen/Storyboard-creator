@@ -26,6 +26,15 @@ Despues del informe, pide:
 
 `Ahora dame una version de 10 lineas para enviar al equipo creativo.`
 
+## Newsletter automatica (correo semanal)
+
+Guia completa: `docs/SETUP-NEWSLETTER.md`
+
+Resumen:
+- 1 informe/semana para max 5 afiliados
+- Envio por email gratis (Resend + GitHub Actions)
+- Proteccion de creditos Cursor con `config/budget.json`
+
 ## Que apruebas tu
 
 - Si el enfoque te gusta, me dices: "Aprobado".
