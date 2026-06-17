@@ -1,7 +1,16 @@
 /**
- * Convierte el markdown del informe en bloques HTML para la plantilla 2894_signals.
- * Sin LLM — solo parsing, reutilizable cada semana.
+ * Paleta 2894_signals — cambia solo estos colores para ajustar la estetica.
  */
+const THEME = {
+  text: "#ebe6dc",
+  muted: "#9c968a",
+  accent: "#e8b86d",
+  accentSoft: "#c9a227",
+  link: "#9ed4f0",
+  cardBg: "#111010",
+  cardBorder: "#2c2926",
+  pillBg: "#1a1816",
+};
 
 function escapeHtml(s) {
   return s
@@ -16,9 +25,9 @@ function linkify(text) {
   return escaped
     .replace(
       /(https?:\/\/[^\s<]+)/g,
-      '<a href="$1" style="color:#7dd3fc;text-decoration:none;border-bottom:1px solid #38bdf8;">$1</a>'
+      `<a href="$1" style="color:${THEME.link};text-decoration:none;border-bottom:1px solid ${THEME.link};word-break:break-all;">$1</a>`
     )
-    .replace(/\*\*(.*?)\*\*/g, "<strong style=\"color:#f1f5f9;\">$1</strong>");
+    .replace(/\*\*(.*?)\*\*/g, `<strong style="color:#faf8f4;">$1</strong>`);
 }
 
 function extractSection(md, startPattern, endPattern) {
@@ -35,10 +44,37 @@ function bulletsToList(text) {
     .split("\n")
     .filter((l) => l.trim().startsWith("- "))
     .map((l) => l.replace(/^- /, "").trim());
-  if (!items.length) return `<p style="margin:0;color:#cbd5e1;line-height:1.6;">${linkify(text.replace(/\n/g, " "))}</p>`;
-  return `<ul style="margin:8px 0 0;padding-left:18px;color:#cbd5e1;line-height:1.65;">
-    ${items.map((i) => `<li style="margin-bottom:6px;">${linkify(i)}</li>`).join("")}
-  </ul>`;
+
+  const lead = items.find((i) => /^Resumen/i.test(i));
+  const rest = items.filter((i) => i !== lead);
+
+  let html = "";
+  if (lead) {
+    html += `<p style="margin:0 0 12px;color:${THEME.text};font-size:14px;line-height:1.65;">${linkify(lead.replace(/^Resumen[^:]*:\s*/i, ""))}</p>`;
+  }
+
+  const detail = rest.length ? rest : items.filter((i) => !/^Resumen/i.test(i));
+  if (detail.length) {
+    html += `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:4px;">`;
+    for (const item of detail) {
+      const label = item.includes(":") ? item.split(":")[0] : null;
+      const value = label ? item.slice(label.length + 1).trim() : item;
+      html += `<tr><td style="padding:5px 0;font-size:13px;line-height:1.55;">`;
+      if (label) {
+        html += `<span style="color:${THEME.accent};font-size:11px;letter-spacing:0.06em;text-transform:uppercase;">${escapeHtml(label)}</span><br/>`;
+        html += `<span style="color:${THEME.muted};">${linkify(value)}</span>`;
+      } else {
+        html += `<span style="color:${THEME.muted};">${linkify(item)}</span>`;
+      }
+      html += `</td></tr>`;
+    }
+    html += `</table>`;
+  }
+
+  if (!html) {
+    return `<p style="margin:0;color:${THEME.muted};line-height:1.6;">${linkify(text.replace(/\n/g, " "))}</p>`;
+  }
+  return html;
 }
 
 function parseExecutive(md) {
@@ -49,8 +85,8 @@ function parseExecutive(md) {
     .filter(Boolean);
   return lines
     .map(
-      (l) =>
-        `<p style="margin:0 0 14px;color:#e2e8f0;font-size:15px;line-height:1.7;">${linkify(l)}</p>`
+      (l, i) =>
+        `<p style="margin:0 0 ${i === lines.length - 1 ? "0" : "16px"};color:${THEME.text};font-size:15px;line-height:1.75;font-family:Georgia,'Times New Roman',serif;">${linkify(l)}</p>`
     )
     .join("");
 }
@@ -65,17 +101,26 @@ function parseNewsCards(md) {
       const body = lines.slice(1).join("\n").trim();
       const num = String(idx + 1).padStart(2, "0");
       return `
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px;">
         <tr>
-          <td style="background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);border:1px solid #334155;border-radius:12px;padding:20px 22px;">
+          <td style="background:${THEME.cardBg};border:1px solid ${THEME.cardBorder};border-radius:14px;padding:0;overflow:hidden;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td width="44" valign="top">
-                  <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;font-weight:700;font-size:13px;line-height:36px;text-align:center;font-family:Georgia,serif;">${num}</div>
-                </td>
-                <td valign="top" style="padding-left:12px;">
-                  <h3 style="margin:0 0 10px;font-family:Georgia,'Times New Roman',serif;font-size:17px;line-height:1.35;color:#f8fafc;font-weight:600;">${linkify(title)}</h3>
-                  ${bulletsToList(body)}
+                <td width="4" style="background:linear-gradient(180deg,${THEME.accent},${THEME.accentSoft});font-size:0;line-height:0;">&nbsp;</td>
+                <td style="padding:18px 20px 20px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td>
+                        <span style="display:inline-block;padding:3px 8px;border-radius:6px;background:${THEME.pillBg};color:${THEME.accent};font-size:11px;font-weight:700;letter-spacing:0.14em;font-family:ui-monospace,monospace;">SIGNAL ${num}</span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding-top:12px;">
+                        <h3 style="margin:0 0 12px;font-family:Georgia,'Times New Roman',serif;font-size:18px;line-height:1.35;color:#faf8f4;font-weight:500;">${linkify(title)}</h3>
+                        ${bulletsToList(body)}
+                      </td>
+                    </tr>
+                  </table>
                 </td>
               </tr>
             </table>
@@ -96,9 +141,9 @@ function parseRadar(md) {
     .map(
       (item) => `
     <tr>
-      <td style="padding:10px 0;border-bottom:1px solid #1e293b;">
-        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22d3ee;margin-right:10px;vertical-align:middle;"></span>
-        <span style="color:#e2e8f0;font-size:14px;line-height:1.6;vertical-align:middle;">${linkify(item)}</span>
+      <td style="padding:11px 0;border-bottom:1px solid ${THEME.cardBorder};">
+        <span style="color:${THEME.accent};font-size:14px;padding-right:8px;">◆</span>
+        <span style="color:${THEME.text};font-size:14px;line-height:1.65;">${linkify(item)}</span>
       </td>
     </tr>`
     )
@@ -115,14 +160,12 @@ function parseActions(md) {
     .map(
       (item, i) => `
     <tr>
-      <td style="padding:12px 16px;background:${i % 2 === 0 ? "#0f172a" : "#111827"};border-radius:8px;">
-        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-          <td style="color:#fb923c;font-weight:700;font-size:13px;padding-right:12px;white-space:nowrap;">→</td>
-          <td style="color:#f1f5f9;font-size:14px;line-height:1.55;">${linkify(item)}</td>
-        </tr></table>
+      <td style="padding:14px 16px;background:${i % 2 === 0 ? THEME.pillBg : THEME.cardBg};border-radius:10px;border:1px solid ${THEME.cardBorder};">
+        <span style="color:${THEME.accent};font-weight:700;font-size:12px;padding-right:10px;">0${i + 1}</span>
+        <span style="color:${THEME.text};font-size:14px;line-height:1.6;">${linkify(item)}</span>
       </td>
     </tr>
-    <tr><td style="height:8px;"></td></tr>`
+    <tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>`
     )
     .join("");
 }
@@ -138,16 +181,32 @@ function formatDateLabel(isoDate) {
   });
 }
 
+function getWeekNumber(isoDate) {
+  const d = new Date(isoDate + "T12:00:00Z");
+  const start = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const dayOfYear = Math.floor((d - start) / 86400000) + 1;
+  return String(Math.ceil(dayOfYear / 7)).padStart(2, "0");
+}
+
 function parseReport(markdown, date) {
   return {
     date,
     date_label: formatDateLabel(date),
+    week_number: getWeekNumber(date),
     year: date.slice(0, 4),
-    executive_html: parseExecutive(markdown) || "<p style='color:#94a3b8;'>Sin resumen esta semana.</p>",
-    news_html: parseNewsCards(markdown) || "<p style='color:#94a3b8;'>Sin noticias esta semana.</p>",
-    radar_html: parseRadar(markdown) || "<tr><td style='color:#94a3b8;'>—</td></tr>",
-    actions_html: parseActions(markdown) || "<tr><td style='color:#94a3b8;'>—</td></tr>",
+    executive_html:
+      parseExecutive(markdown) ||
+      `<p style='color:${THEME.muted};'>Sin resumen esta semana.</p>`,
+    news_html:
+      parseNewsCards(markdown) ||
+      `<p style='color:${THEME.muted};'>Sin noticias esta semana.</p>`,
+    radar_html:
+      parseRadar(markdown) ||
+      `<tr><td style='color:${THEME.muted};'>—</td></tr>`,
+    actions_html:
+      parseActions(markdown) ||
+      `<tr><td style='color:${THEME.muted};'>—</td></tr>`,
   };
 }
 
-module.exports = { parseReport, formatDateLabel };
+module.exports = { parseReport, formatDateLabel, THEME };

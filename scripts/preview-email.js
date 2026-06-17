@@ -30,6 +30,7 @@ let html = fs.readFileSync(templatePath, "utf8");
 const data = {
   DATE: date,
   DATE_LABEL: parsed.date_label,
+  WEEK_NUMBER: parsed.week_number,
   YEAR: parsed.year,
   EXECUTIVE_HTML: parsed.executive_html,
   NEWS_HTML: parsed.news_html,
