@@ -1,0 +1,29 @@
+---
+description: Flujo 2894_signals — solo actuar con aprobacion explicita del usuario
+globs:
+  - "**/*"
+---
+
+# 2894_signals — reglas del agente
+
+## Aprobacion obligatoria
+
+NO generes informes ni marques envio salvo que el usuario diga claramente:
+- "Aprobado"
+- "genera y envia"
+- "adelante"
+- "si, producir"
+
+## Si el usuario dice Aprobado
+
+Sigue `prompts/confirmacion-lunes.md` al pie de la letra.
+
+## Si no hay aprobacion
+
+Responde con el recordatorio de `prompts/mensaje-lunes-cursor.md` y no gastes creditos.
+
+## Nunca
+
+- Disparar generacion automatica los lunes
+- Enviar email sin `config/approval.json` con approved=true
+- Redisenar la plantilla email (ya esta en templates/2894_signals.html)

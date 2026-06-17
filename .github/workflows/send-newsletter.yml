@@ -1,14 +1,12 @@
 name: Send 2894_signals newsletter
 
 on:
-  schedule:
-    # Lunes 09:00 UTC — 2h despues de generacion (envia si hay informe reciente)
-    - cron: "0 9 * * 1"
   push:
     branches:
       - main
     paths:
       - "reports/*-ai-news.md"
+      - "config/approval.json"
   workflow_dispatch:
 
 jobs:
@@ -16,6 +14,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Check user approval
+        id: approval
+        run: node scripts/check-approval.js
+        continue-on-error: true
+
+      - name: Skip send without approval
+        if: steps.approval.outcome != 'success'
+        run: |
+          echo "::notice::Envio cancelado — falta tu Aprobado en Cursor."
+          exit 0
 
       - name: Validate subscribers (max 5 affiliates)
         run: |
@@ -26,12 +35,17 @@ jobs:
           console.log('Destinatarios:', list.join(', '));
           "
 
-      - name: Check report freshness (solo en cron de lunes)
-        if: github.event_name == 'schedule'
-        run: node scripts/check-report-fresh.js
-
       - name: Send email via Resend
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
         run: node scripts/send-report-email.js
+
+      - name: Reset approval after send
+        run: |
+          node scripts/reset-approval.js
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add config/approval.json
+          git diff --staged --quiet || git commit -m "Reset newsletter approval after send"
+          git push || true

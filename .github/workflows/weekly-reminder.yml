@@ -1,0 +1,49 @@
+name: 2894_signals — Recordatorio lunes
+
+on:
+  schedule:
+    # Lunes 08:00 UTC — solo aviso, SIN gastar creditos Cursor
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  reminder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Crear recordatorio semanal (gratis)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          gh label create "2894-signals-reminder" --color "4CBFFF" 2>/dev/null || true
+          gh issue create \
+            --title "2894_signals — ¿Producimos el newsletter de esta semana?" \
+            --label "2894-signals-reminder" \
+            --body "$(cat <<EOF
+          ## Recordatorio semanal (sin coste automatico)
+
+          Hoy es lunes. **No se genera ni envia nada automaticamente.**
+
+          ### Para producir y enviar, abre Cursor y escribe:
+
+          \`\`\`
+          Aprobado — genera y envia 2894_signals de esta semana
+          \`\`\`
+
+          O solo:
+
+          \`\`\`
+          Aprobado
+          \`\`\`
+
+          Hasta que no lo confirmes en Cursor, **no se envia email** a:
+          - Slondon99@outlook.es
+          - juliosatorre@gmail.com
+
+          ---
+          Fecha: ${DATE}
+          EOF
+          )"

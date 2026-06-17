@@ -26,13 +26,15 @@ Despues del informe, pide:
 
 `Ahora dame una version de 10 lineas para enviar al equipo creativo.`
 
-## Newsletter automatica (correo semanal)
+## Newsletter 2894_signals (con tu aprobacion)
 
-- Guia completa lunes automatico: `docs/AUTOMATICO-LUNES.md`
-- Guia Resend paso a paso: `docs/PASO-A-PASO.md`
-- Estetica: `docs/PERSONALIZAR-ESTETICA.md`
+- **Cada lunes:** recordatorio gratis en GitHub (sin gastar creditos)
+- **Tu escribes:** `Aprobado` en este chat
+- **Entonces:** se genera el informe y se envia el email
 
-Destinatarios: Slondon99@outlook.es + juliosatorre@gmail.com (+ hasta 3 afiliados mas)
+Guia: `docs/CONFIRMACION-LUNES.md`
+
+Destinatarios: Slondon99@outlook.es + juliosatorre@gmail.com
 
 ## Que apruebas tu
 
