@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2894_signals</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Helvetica, Arial, sans-serif;
+      background: #fff;
+      color: #000;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .wrap {
+      max-width: 420px;
+      width: 100%;
+      border: 1px solid #000;
+    }
+    .top {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-bottom: 1px solid #000;
+    }
+    .logo-area { padding: 24px; border-right: 1px solid #000; }
+    .logo {
+      width: 10px; height: 10px; background: #000;
+      display: inline-block; margin: 2px;
+    }
+    .hero { background: #111; min-height: 80px; }
+    .title-block {
+      background: #4CBFFF;
+      padding: 28px 24px;
+      border-bottom: 1px solid #000;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      line-height: 1.2;
+    }
+    .form-area { padding: 24px; }
+    label { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #666; }
+    input, button {
+      width: 100%;
+      margin-top: 8px;
+      padding: 14px;
+      border: 1px solid #000;
+      font-size: 1rem;
+      background: #fff;
+    }
+    button {
+      background: #4CBFFF;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      margin-top: 16px;
+    }
+    .note { font-size: 12px; color: #666; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="logo-area">
+        <span class="logo"></span><span class="logo"></span><br/>
+        <span class="logo"></span><span class="logo"></span>
+      </div>
+      <div class="hero"></div>
+    </div>
+    <div class="title-block">
+      <h1>2894_signals</h1>
+      <p style="margin:8px 0 0;font-size:12px;">Newsletter semanal · máx. 5 plazas</p>
+    </div>
+    <div class="form-area">
+      <form id="form">
+        <label for="email">Tu correo</label>
+        <input type="email" id="email" required placeholder="tu@empresa.com" />
+        <button type="submit">Solicitar plaza</button>
+      </form>
+      <p id="msg" class="note"></p>
+    </div>
+  </div>
+  <script>
+    const FORMSPREE_ID = "TU_FORMSPREE_ID";
+    document.getElementById("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById("msg");
+      if (FORMSPREE_ID === "TU_FORMSPREE_ID") {
+        msg.textContent = "Contacta al administrador para alta manual.";
+        return;
+      }
+      const res = await fetch(`https://formspree.io/f/${FORMSPREE_ID}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ email: document.getElementById("email").value.trim(), newsletter: "2894_signals" }),
+      });
+      msg.textContent = res.ok ? "Solicitud enviada." : "Error al enviar.";
+    });
+  </script>
+</body>
+</html>
