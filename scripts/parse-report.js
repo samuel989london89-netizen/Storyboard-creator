@@ -1,15 +1,15 @@
 /**
- * Paleta 2894_signals — cambia solo estos colores para ajustar la estetica.
+ * 2894_signals — estilo minimal brutalista (#4CBFFF)
  */
 const THEME = {
-  text: "#ebe6dc",
-  muted: "#9c968a",
-  accent: "#e8b86d",
-  accentSoft: "#c9a227",
-  link: "#9ed4f0",
-  cardBg: "#111010",
-  cardBorder: "#2c2926",
-  pillBg: "#1a1816",
+  bg: "#ffffff",
+  accent: "#4CBFFF",
+  text: "#000000",
+  muted: "#1a1a1a",
+  soft: "#666666",
+  border: "#000000",
+  dark: "#111111",
+  link: "#000000",
 };
 
 function escapeHtml(s) {
@@ -25,9 +25,9 @@ function linkify(text) {
   return escaped
     .replace(
       /(https?:\/\/[^\s<]+)/g,
-      `<a href="$1" style="color:${THEME.link};text-decoration:none;border-bottom:1px solid ${THEME.link};word-break:break-all;">$1</a>`
+      `<a href="$1" style="color:${THEME.text};text-decoration:underline;word-break:break-all;">$1</a>`
     )
-    .replace(/\*\*(.*?)\*\*/g, `<strong style="color:#faf8f4;">$1</strong>`);
+    .replace(/\*\*(.*?)\*\*/g, `<strong>$1</strong>`);
 }
 
 function extractSection(md, startPattern, endPattern) {
@@ -39,40 +39,38 @@ function extractSection(md, startPattern, endPattern) {
   return block.replace(startPattern, "").trim();
 }
 
-function bulletsToList(text) {
+function pickField(items, prefix) {
+  const hit = items.find((i) => i.toLowerCase().startsWith(prefix.toLowerCase()));
+  if (!hit) return "";
+  const idx = hit.indexOf(":");
+  return idx === -1 ? hit : hit.slice(idx + 1).trim();
+}
+
+function bulletsToHighlightBox(text) {
   const items = text
     .split("\n")
     .filter((l) => l.trim().startsWith("- "))
     .map((l) => l.replace(/^- /, "").trim());
 
-  const lead = items.find((i) => /^Resumen/i.test(i));
-  const rest = items.filter((i) => i !== lead);
+  const summary =
+    pickField(items, "Resumen") ||
+    pickField(items, "Por que importa") ||
+    items[0] ||
+    text.replace(/\n/g, " ");
 
-  let html = "";
-  if (lead) {
-    html += `<p style="margin:0 0 12px;color:${THEME.text};font-size:14px;line-height:1.65;">${linkify(lead.replace(/^Resumen[^:]*:\s*/i, ""))}</p>`;
-  }
+  const extras = [];
+  const impacto = pickField(items, "Por que importa al mundo creativo");
+  const caso = pickField(items, "Caso de uso");
+  const riesgo = pickField(items, "Riesgo");
+  const fuente = pickField(items, "Fuente oficial");
+  if (impacto) extras.push(`<strong>Impacto:</strong> ${linkify(impacto)}`);
+  if (caso) extras.push(`<strong>Uso:</strong> ${linkify(caso)}`);
+  if (riesgo) extras.push(`<strong>Riesgo:</strong> ${linkify(riesgo)}`);
+  if (fuente) extras.push(`<strong>Fuente:</strong> ${linkify(fuente)}`);
 
-  const detail = rest.length ? rest : items.filter((i) => !/^Resumen/i.test(i));
-  if (detail.length) {
-    html += `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:4px;">`;
-    for (const item of detail) {
-      const label = item.includes(":") ? item.split(":")[0] : null;
-      const value = label ? item.slice(label.length + 1).trim() : item;
-      html += `<tr><td style="padding:5px 0;font-size:13px;line-height:1.55;">`;
-      if (label) {
-        html += `<span style="color:${THEME.accent};font-size:11px;letter-spacing:0.06em;text-transform:uppercase;">${escapeHtml(label)}</span><br/>`;
-        html += `<span style="color:${THEME.muted};">${linkify(value)}</span>`;
-      } else {
-        html += `<span style="color:${THEME.muted};">${linkify(item)}</span>`;
-      }
-      html += `</td></tr>`;
-    }
-    html += `</table>`;
-  }
-
-  if (!html) {
-    return `<p style="margin:0;color:${THEME.muted};line-height:1.6;">${linkify(text.replace(/\n/g, " "))}</p>`;
+  let html = `<p style="margin:0;color:${THEME.text};font-size:14px;line-height:1.65;font-family:Helvetica,Arial,sans-serif;">${linkify(summary)}</p>`;
+  if (extras.length) {
+    html += `<p style="margin:14px 0 0;color:${THEME.muted};font-size:12px;line-height:1.6;font-family:Helvetica,Arial,sans-serif;">${extras.join("<br/>")}</p>`;
   }
   return html;
 }
@@ -85,42 +83,79 @@ function parseExecutive(md) {
     .filter(Boolean);
   return lines
     .map(
-      (l, i) =>
-        `<p style="margin:0 0 ${i === lines.length - 1 ? "0" : "16px"};color:${THEME.text};font-size:15px;line-height:1.75;font-family:Georgia,'Times New Roman',serif;">${linkify(l)}</p>`
+      (l) =>
+        `<p style="margin:0 0 12px;color:${THEME.text};font-size:14px;line-height:1.7;font-family:Helvetica,Arial,sans-serif;">${linkify(l)}</p>`
     )
     .join("");
+}
+
+function logoIconHtml() {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+    <tr>
+      <td style="width:10px;height:10px;background:${THEME.text};font-size:0;line-height:0;">&nbsp;</td>
+      <td style="width:6px;font-size:0;">&nbsp;</td>
+      <td style="width:10px;height:10px;background:${THEME.text};font-size:0;line-height:0;">&nbsp;</td>
+    </tr>
+    <tr><td colspan="3" style="height:6px;font-size:0;">&nbsp;</td></tr>
+    <tr>
+      <td style="width:10px;height:10px;background:${THEME.text};font-size:0;line-height:0;">&nbsp;</td>
+      <td style="width:6px;font-size:0;">&nbsp;</td>
+      <td style="width:10px;height:10px;background:${THEME.text};font-size:0;line-height:0;">&nbsp;</td>
+    </tr>
+  </table>`;
 }
 
 function parseNewsCards(md) {
   const block = extractSection(md, /^## 2\)[^\n]*\n/m, /^## 3\)/m);
   const cards = block.split(/^### /m).filter(Boolean);
+
   return cards
     .map((card, idx) => {
       const lines = card.trim().split("\n");
-      const title = lines[0].replace(/^\d+\)\s*/, "").trim();
+      const title = lines[0].replace(/^\d+\)\s*/, "").trim().toUpperCase();
       const body = lines.slice(1).join("\n").trim();
       const num = String(idx + 1).padStart(2, "0");
+
       return `
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border:1px solid ${THEME.border};border-collapse:collapse;">
         <tr>
-          <td style="background:${THEME.cardBg};border:1px solid ${THEME.cardBorder};border-radius:14px;padding:0;overflow:hidden;">
+          <!-- Columna texto -->
+          <td valign="top" width="58%" style="border-right:1px solid ${THEME.border};background:${THEME.bg};">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td width="4" style="background:linear-gradient(180deg,${THEME.accent},${THEME.accentSoft});font-size:0;line-height:0;">&nbsp;</td>
-                <td style="padding:18px 20px 20px;">
-                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <td style="padding:20px 22px 16px;border-bottom:1px solid ${THEME.border};">
+                  <h3 style="margin:0;font-family:Helvetica,Arial,sans-serif;font-size:15px;font-weight:800;line-height:1.35;color:${THEME.text};letter-spacing:0.02em;text-transform:uppercase;">${linkify(title)}</h3>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:0;background:${THEME.accent};border-bottom:1px solid ${THEME.border};">
+                  <div style="padding:18px 22px;">
+                    ${bulletsToHighlightBox(body)}
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:0;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
                     <tr>
-                      <td>
-                        <span style="display:inline-block;padding:3px 8px;border-radius:6px;background:${THEME.pillBg};color:${THEME.accent};font-size:11px;font-weight:700;letter-spacing:0.14em;font-family:ui-monospace,monospace;">SIGNAL ${num}</span>
+                      <td width="56" style="padding:12px;border-right:1px solid ${THEME.border};text-align:center;vertical-align:middle;">
+                        ${logoIconHtml()}
                       </td>
-                    </tr>
-                    <tr>
-                      <td style="padding-top:12px;">
-                        <h3 style="margin:0 0 12px;font-family:Georgia,'Times New Roman',serif;font-size:18px;line-height:1.35;color:#faf8f4;font-weight:500;">${linkify(title)}</h3>
-                        ${bulletsToList(body)}
+                      <td style="padding:12px 16px;font-family:Helvetica,Arial,sans-serif;font-size:11px;color:${THEME.soft};letter-spacing:0.08em;text-transform:uppercase;">
+                        Signal · Creative AI
                       </td>
                     </tr>
                   </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+          <!-- Columna visual -->
+          <td valign="top" width="42%" style="background:${THEME.dark};position:relative;">
+            <table role="presentation" width="100%" height="100%" cellpadding="0" cellspacing="0" style="min-height:220px;">
+              <tr>
+                <td valign="bottom" align="right" style="padding:16px;height:220px;background:${THEME.dark};">
+                  <div style="display:inline-block;width:44px;height:44px;background:${THEME.bg};border:1px solid ${THEME.border};text-align:center;line-height:44px;font-family:Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:${THEME.text};">${num}</div>
                 </td>
               </tr>
             </table>
@@ -139,11 +174,11 @@ function parseRadar(md) {
     .map((l) => l.replace(/^- /, "").trim());
   return items
     .map(
-      (item) => `
+      (item, i) => `
     <tr>
-      <td style="padding:11px 0;border-bottom:1px solid ${THEME.cardBorder};">
-        <span style="color:${THEME.accent};font-size:14px;padding-right:8px;">◆</span>
-        <span style="color:${THEME.text};font-size:14px;line-height:1.65;">${linkify(item)}</span>
+      <td style="padding:14px 18px;border-bottom:1px solid ${THEME.border};background:${i % 2 === 0 ? THEME.bg : "#f7fbff"};">
+        <span style="font-family:Helvetica,Arial,sans-serif;font-size:11px;font-weight:700;color:${THEME.text};padding-right:10px;">${String(i + 1).padStart(2, "0")}</span>
+        <span style="font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:1.6;color:${THEME.muted};">${linkify(item)}</span>
       </td>
     </tr>`
     )
@@ -160,12 +195,11 @@ function parseActions(md) {
     .map(
       (item, i) => `
     <tr>
-      <td style="padding:14px 16px;background:${i % 2 === 0 ? THEME.pillBg : THEME.cardBg};border-radius:10px;border:1px solid ${THEME.cardBorder};">
-        <span style="color:${THEME.accent};font-weight:700;font-size:12px;padding-right:10px;">0${i + 1}</span>
-        <span style="color:${THEME.text};font-size:14px;line-height:1.6;">${linkify(item)}</span>
+      <td style="padding:16px 18px;border-bottom:1px solid ${THEME.border};background:${THEME.accent};">
+        <span style="font-family:Helvetica,Arial,sans-serif;font-size:11px;font-weight:800;color:${THEME.text};padding-right:12px;">0${i + 1}</span>
+        <span style="font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:1.6;color:${THEME.text};">${linkify(item)}</span>
       </td>
-    </tr>
-    <tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>`
+    </tr>`
     )
     .join("");
 }
@@ -194,19 +228,20 @@ function parseReport(markdown, date) {
     date_label: formatDateLabel(date),
     week_number: getWeekNumber(date),
     year: date.slice(0, 4),
+    logo_html: logoIconHtml(),
     executive_html:
       parseExecutive(markdown) ||
-      `<p style='color:${THEME.muted};'>Sin resumen esta semana.</p>`,
+      `<p style='color:${THEME.soft};font-family:Helvetica,Arial,sans-serif;'>Sin resumen esta semana.</p>`,
     news_html:
       parseNewsCards(markdown) ||
-      `<p style='color:${THEME.muted};'>Sin noticias esta semana.</p>`,
+      `<p style='color:${THEME.soft};'>Sin noticias esta semana.</p>`,
     radar_html:
       parseRadar(markdown) ||
-      `<tr><td style='color:${THEME.muted};'>—</td></tr>`,
+      `<tr><td style='padding:14px;color:${THEME.soft};'>—</td></tr>`,
     actions_html:
       parseActions(markdown) ||
-      `<tr><td style='color:${THEME.muted};'>—</td></tr>`,
+      `<tr><td style='padding:14px;color:${THEME.soft};'>—</td></tr>`,
   };
 }
 
-module.exports = { parseReport, formatDateLabel, THEME };
+module.exports = { parseReport, formatDateLabel, THEME, logoIconHtml };

@@ -65,6 +65,7 @@ async function send() {
     DATE_LABEL: parsed.date_label,
     WEEK_NUMBER: parsed.week_number,
     YEAR: parsed.year,
+    LOGO_HTML: parsed.logo_html,
     EXECUTIVE_HTML: parsed.executive_html,
     NEWS_HTML: parsed.news_html,
     RADAR_HTML: parsed.radar_html,

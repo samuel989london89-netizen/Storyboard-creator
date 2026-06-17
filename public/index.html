@@ -3,93 +3,106 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>2894_signals — Alta newsletter</title>
+  <title>2894_signals</title>
   <style>
-    :root { --bg: #020617; --card: #0f172a; --accent: #fb923c; --text: #f1f5f9; --muted: #64748b; }
     * { box-sizing: border-box; }
     body {
-      font-family: Georgia, "Times New Roman", serif;
-      background: var(--bg);
-      color: var(--text);
       margin: 0;
+      font-family: Helvetica, Arial, sans-serif;
+      background: #fff;
+      color: #000;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 24px;
     }
-    .card {
-      background: var(--card);
-      border: 1px solid #334155;
-      border-radius: 16px;
-      padding: 40px 36px;
+    .wrap {
       max-width: 420px;
       width: 100%;
+      border: 1px solid #000;
     }
-    h1 { margin: 0; font-size: 2rem; font-weight: 400; }
-    h1 span { color: var(--accent); }
-    .tag { color: var(--muted); font-size: 0.85rem; margin: 12px 0 28px; font-family: system-ui, sans-serif; }
-    label { font-family: system-ui, sans-serif; font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+    .top {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-bottom: 1px solid #000;
+    }
+    .logo-area { padding: 24px; border-right: 1px solid #000; }
+    .logo {
+      width: 10px; height: 10px; background: #000;
+      display: inline-block; margin: 2px;
+    }
+    .hero { background: #111; min-height: 80px; }
+    .title-block {
+      background: #4CBFFF;
+      padding: 28px 24px;
+      border-bottom: 1px solid #000;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      line-height: 1.2;
+    }
+    .form-area { padding: 24px; }
+    label { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #666; }
     input, button {
       width: 100%;
+      margin-top: 8px;
       padding: 14px;
-      margin: 8px 0 16px;
+      border: 1px solid #000;
       font-size: 1rem;
-      border-radius: 8px;
-      border: 1px solid #334155;
-      background: #020617;
-      color: var(--text);
-      font-family: system-ui, sans-serif;
+      background: #fff;
     }
     button {
-      background: linear-gradient(135deg, #f97316, #ea580c);
-      border: none;
-      color: #fff;
-      font-weight: 600;
+      background: #4CBFFF;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
       cursor: pointer;
-      margin-top: 8px;
+      margin-top: 16px;
     }
-    .note { color: var(--muted); font-size: 0.85rem; font-family: system-ui, sans-serif; }
-    .ok { color: #4ade80; }
-    .err { color: #f87171; }
+    .note { font-size: 12px; color: #666; margin-top: 12px; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>2894<span>_signals</span></h1>
-    <p class="tag">Señales semanales de IA creativa · máx. 5 plazas</p>
-
-    <form id="form">
-      <label for="email">Tu correo</label>
-      <input type="email" id="email" required placeholder="tu@empresa.com" />
-      <button type="submit">Solicitar plaza</button>
-    </form>
-    <p id="msg" class="note"></p>
+  <div class="wrap">
+    <div class="top">
+      <div class="logo-area">
+        <span class="logo"></span><span class="logo"></span><br/>
+        <span class="logo"></span><span class="logo"></span>
+      </div>
+      <div class="hero"></div>
+    </div>
+    <div class="title-block">
+      <h1>2894_signals</h1>
+      <p style="margin:8px 0 0;font-size:12px;">Newsletter semanal · máx. 5 plazas</p>
+    </div>
+    <div class="form-area">
+      <form id="form">
+        <label for="email">Tu correo</label>
+        <input type="email" id="email" required placeholder="tu@empresa.com" />
+        <button type="submit">Solicitar plaza</button>
+      </form>
+      <p id="msg" class="note"></p>
+    </div>
   </div>
-
   <script>
     const FORMSPREE_ID = "TU_FORMSPREE_ID";
     document.getElementById("form").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const email = document.getElementById("email").value.trim();
       const msg = document.getElementById("msg");
       if (FORMSPREE_ID === "TU_FORMSPREE_ID") {
-        msg.textContent = "Contacta al administrador para alta manual (máx. 5 afiliados).";
-        msg.className = "err";
+        msg.textContent = "Contacta al administrador para alta manual.";
         return;
       }
-      try {
-        const res = await fetch(`https://formspree.io/f/${FORMSPREE_ID}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ email, newsletter: "2894_signals" }),
-        });
-        msg.textContent = res.ok ? "Solicitud enviada. Te confirmaremos si hay plaza." : "Error al enviar.";
-        msg.className = res.ok ? "ok" : "err";
-      } catch {
-        msg.textContent = "No se pudo enviar.";
-        msg.className = "err";
-      }
+      const res = await fetch(`https://formspree.io/f/${FORMSPREE_ID}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ email: document.getElementById("email").value.trim(), newsletter: "2894_signals" }),
+      });
+      msg.textContent = res.ok ? "Solicitud enviada." : "Error al enviar.";
     });
   </script>
 </body>

@@ -3,78 +3,91 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <title>2894_signals — {{DATE}}</title>
 </head>
-<body style="margin:0;padding:0;background-color:#080808;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
-    2894_signals — señales semanales de IA creativa · {{DATE_LABEL}}
+<body style="margin:0;padding:0;background-color:#ffffff;font-family:Helvetica,Arial,sans-serif;">
+
+  <div style="display:none;max-height:0;overflow:hidden;">
+    2894_signals — {{DATE_LABEL}}
   </div>
 
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#080808;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
     <tr>
-      <td align="center" style="padding:0;">
-        <!-- Barra superior -->
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-          <tr>
-            <td style="height:3px;background:linear-gradient(90deg,#e8b86d 0%,#c9a227 50%,#8b6914 100%);font-size:0;line-height:0;">&nbsp;</td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td align="center" style="padding:36px 20px 52px;">
+      <td align="center" style="padding:24px 16px 40px;">
 
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border:1px solid #000000;border-collapse:collapse;">
 
-          <!-- Masthead -->
+          <!-- PORTADA (referencia imagen 1) -->
           <tr>
-            <td style="padding:0 0 32px;text-align:center;border-bottom:1px solid #242220;">
-              <p style="margin:0 0 20px;color:#6b6560;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;">
-                Creative AI intelligence · weekly digest
-              </p>
-              <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:46px;font-weight:400;letter-spacing:-0.03em;line-height:1;">
-                <span style="color:#f5f0e8;">2894</span><span style="color:#e8b86d;">_signals</span>
-              </h1>
-              <p style="margin:14px auto 0;max-width:400px;color:#8a847a;font-size:13px;line-height:1.6;letter-spacing:0.02em;">
-                Diseño · contenido · video · audio · branding
-              </p>
+            <td width="50%" rowspan="2" valign="top" style="border-right:1px solid #000000;border-bottom:1px solid #000000;background:#ffffff;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="height:280px;">
+                <tr>
+                  <td valign="top" style="padding:20px;">
+                    {{LOGO_HTML}}
+                  </td>
+                </tr>
+                <tr>
+                  <td valign="bottom" style="padding:20px;">
+                    <p style="margin:0;font-size:10px;color:#000000;letter-spacing:0.04em;line-height:1.5;">
+                      ©{{YEAR}} 2894_signals<br/>All Rights Reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+            <td width="50%" valign="top" style="border-bottom:1px solid #000000;background:#111111;height:140px;">
+              <table role="presentation" width="100%" height="140" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="right" valign="top" style="padding:16px;">
+                    <div style="width:40px;height:40px;background:#ffffff;border:1px solid #000000;text-align:center;line-height:40px;font-size:13px;font-weight:700;color:#000000;">W{{WEEK_NUMBER}}</div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0 20px 20px;font-size:10px;color:#888888;letter-spacing:0.2em;text-transform:uppercase;">
+                    Creative · AI · Weekly
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
-
-          <!-- Fecha / semana -->
           <tr>
-            <td style="padding:28px 0 26px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#111010;border-radius:16px;border:1px solid #2c2926;">
+            <td width="50%" valign="middle" style="background:#4CBFFF;border-bottom:1px solid #000000;padding:28px 24px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="padding:20px 24px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="padding-right:16px;vertical-align:middle;">
-                          <div style="width:52px;height:52px;border-radius:14px;background:#1a1816;border:1px solid #3d3830;text-align:center;line-height:52px;">
-                            <span style="color:#e8b86d;font-size:11px;font-weight:700;letter-spacing:0.08em;font-family:ui-monospace,monospace;">W{{WEEK_NUMBER}}</span>
-                          </div>
-                        </td>
-                        <td style="vertical-align:middle;">
-                          <p style="margin:0;color:#6b6560;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;">Edición semanal</p>
-                          <p style="margin:5px 0 0;color:#f0ebe3;font-size:17px;font-weight:500;font-family:Georgia,'Times New Roman',serif;">{{DATE_LABEL}}</p>
-                        </td>
-                      </tr>
-                    </table>
+                  <td>
+                    <h1 style="margin:0;font-size:22px;font-weight:800;line-height:1.2;color:#000000;letter-spacing:0.01em;text-transform:uppercase;">
+                      Señales de IA<br/>para el mundo creativo
+                    </h1>
+                  </td>
+                  <td align="right" valign="bottom" width="40">
+                    {{LOGO_HTML}}
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
+          <!-- Fecha -->
+          <tr>
+            <td colspan="2" style="padding:18px 22px;border-bottom:1px solid #000000;background:#ffffff;">
+              <p style="margin:0;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#666666;">Edición semanal</p>
+              <p style="margin:6px 0 0;font-size:15px;font-weight:700;color:#000000;text-transform:capitalize;">{{DATE_LABEL}}</p>
+            </td>
+          </tr>
+
           <!-- Resumen -->
           <tr>
-            <td style="padding:0 0 32px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#121110;border-radius:16px;border:1px solid #2c2926;">
+            <td colspan="2" style="border-bottom:1px solid #000000;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td width="3" style="background:#e8b86d;border-radius:16px 0 0 16px;font-size:0;">&nbsp;</td>
-                  <td style="padding:24px 26px;">
-                    <h2 style="margin:0 0 16px;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#e8b86d;font-weight:600;">En pocas palabras</h2>
+                  <td style="padding:20px 22px 12px;background:#ffffff;border-bottom:1px solid #000000;">
+                    <h2 style="margin:0;font-size:13px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#000000;">
+                      Resumen en pocas palabras
+                    </h2>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:20px 22px;background:#4CBFFF;border-bottom:1px solid #000000;">
                     {{EXECUTIVE_HTML}}
                   </td>
                 </tr>
@@ -84,33 +97,30 @@
 
           <!-- Noticias -->
           <tr>
-            <td style="padding:0 0 8px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td>
-                    <h2 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:24px;color:#f5f0e8;font-weight:400;">Señales de la semana</h2>
-                  </td>
-                  <td align="right" style="vertical-align:bottom;">
-                    <span style="color:#5c5750;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;">Top impacto</span>
-                  </td>
-                </tr>
-              </table>
+            <td colspan="2" style="padding:22px 22px 8px;background:#ffffff;border-bottom:1px solid #000000;">
+              <h2 style="margin:0;font-size:13px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#000000;">
+                Señales de la semana
+              </h2>
             </td>
           </tr>
           <tr>
-            <td style="padding:8px 0 32px;">
+            <td colspan="2" style="padding:8px 16px 20px;background:#ffffff;">
               {{NEWS_HTML}}
             </td>
           </tr>
 
-          <!-- Radar (bloque completo, mejor en móvil) -->
+          <!-- Radar -->
           <tr>
-            <td style="padding:0 0 16px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#111010;border-radius:16px;border:1px solid #2c2926;">
+            <td colspan="2" style="border-top:1px solid #000000;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="padding:22px 24px;">
-                    <h2 style="margin:0 0 14px;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#9ed4f0;font-weight:600;">Radar emergente</h2>
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                  <td style="padding:18px 22px;background:#ffffff;border-bottom:1px solid #000000;">
+                    <h2 style="margin:0;font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;">Radar emergente</h2>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
                       {{RADAR_HTML}}
                     </table>
                   </td>
@@ -121,12 +131,16 @@
 
           <!-- Acciones -->
           <tr>
-            <td style="padding:0 0 36px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#111010;border-radius:16px;border:1px solid #2c2926;">
+            <td colspan="2" style="border-top:1px solid #000000;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="padding:22px 24px;">
-                    <h2 style="margin:0 0 14px;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#d4b896;font-weight:600;">Qué hacer esta semana</h2>
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                  <td style="padding:18px 22px;background:#ffffff;border-bottom:1px solid #000000;">
+                    <h2 style="margin:0;font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;">Qué hacer esta semana</h2>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
                       {{ACTIONS_HTML}}
                     </table>
                   </td>
@@ -137,15 +151,12 @@
 
           <!-- Footer -->
           <tr>
-            <td style="padding:28px 0 0;border-top:1px solid #242220;text-align:center;">
-              <p style="margin:0 0 10px;font-family:Georgia,'Times New Roman',serif;font-size:20px;">
-                <span style="color:#8a847a;">2894</span><span style="color:#e8b86d;">_signals</span>
+            <td colspan="2" style="padding:20px 22px;background:#ffffff;border-top:1px solid #000000;text-align:center;">
+              <p style="margin:0 0 6px;font-size:14px;font-weight:800;color:#000000;letter-spacing:0.04em;">
+                2894<span style="color:#4CBFFF;">_</span>SIGNALS
               </p>
-              <p style="margin:0 0 6px;color:#5c5750;font-size:12px;line-height:1.7;">
-                Un informe semanal · máximo 5 lectores
-              </p>
-              <p style="margin:0;color:#3d3830;font-size:11px;">
-                © {{YEAR}} · Fuentes verificables en cada señal
+              <p style="margin:0;font-size:10px;color:#666666;letter-spacing:0.06em;">
+                Un informe semanal · máx. 5 lectores · fuentes verificables
               </p>
             </td>
           </tr>
