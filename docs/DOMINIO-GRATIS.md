@@ -32,6 +32,8 @@ Cada lunes, cuando apruebes y se envíe el newsletter:
 
 ## OPCIÓN B — Dominio 100% gratis (eu.org)
 
+**Guía completa paso a paso:** `docs/EU-ORG-PASO-A-PASO.md`
+
 Puedes pedir un dominio gratis tipo **`2894signals.eu.org`**.
 
 | Ventaja | Inconveniente |
