@@ -27,6 +27,7 @@ jobs:
           exit 0
 
       - name: Validate subscribers (max 5 affiliates)
+        if: steps.approval.outcome == 'success'
         run: |
           node -e "
           const s = require('./config/subscribers.json');
@@ -42,6 +43,7 @@ jobs:
         run: node scripts/send-report-email.js
 
       - name: Reset approval after send
+        if: steps.approval.outcome == 'success'
         run: |
           node scripts/reset-approval.js
           git config user.name "github-actions[bot]"
