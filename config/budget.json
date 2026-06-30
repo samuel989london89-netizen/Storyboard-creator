@@ -1,11 +1,11 @@
 {
   "enabled": true,
   "max_generations_per_month": 4,
-  "generations_this_month": 0,
+  "generations_this_month": 1,
   "month_key": "2026-06",
   "estimated_tokens_per_run": 25000,
   "monthly_token_budget": 100000,
-  "tokens_used_this_month": 0,
+  "tokens_used_this_month": 25000,
   "stop_if_near_limit": true,
   "near_limit_threshold": 0.85,
   "notes": "4 ejecuciones/mes = 1 informe semanal. Si superas el 85% del presupuesto, el sistema se detiene."
